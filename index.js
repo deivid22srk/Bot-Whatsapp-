@@ -73,17 +73,68 @@ function createExampleConfig() {
 }
 
 // Verificar se o usuário é admin
-function isAdmin(userNumber) {
+function isAdmin(userNumber, sock = null) {
     const cleanNumber = userNumber.replace('@s.whatsapp.net', '')
-    return config.admins.includes(cleanNumber) || cleanNumber === config.ownerNumber
+    console.log('🔍 Verificando admin:', cleanNumber)
+    console.log('📋 Admins configurados:', config.admins)
+    console.log('👑 Owner:', config.ownerNumber)
+    
+    // Verificar se é admin configurado ou owner configurado
+    let isAdminUser = config.admins.includes(cleanNumber) || cleanNumber === config.ownerNumber
+    
+    // Verificar se é o dono do número conectado ao bot
+    if (sock && sock.user && sock.user.id) {
+        const botOwnerNumber = sock.user.id.replace(':.*', '').replace('@s.whatsapp.net', '')
+        console.log('🤖 Número do bot conectado:', botOwnerNumber)
+        
+        if (cleanNumber === botOwnerNumber) {
+            console.log('👑 Usuário é o dono do número conectado ao bot!')
+            isAdminUser = true
+        }
+    }
+    
+    console.log('✅ É admin?', isAdminUser)
+    return isAdminUser
 }
 
 // Extrair número mencionado na mensagem
 function getMentionedNumber(message) {
-    const mentionedJid = message.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0]
-    if (mentionedJid) {
-        return mentionedJid.replace('@s.whatsapp.net', '')
+    console.log('🔍 Analisando mensagem para menções...')
+    
+    // Verificar diferentes tipos de mensagem
+    const extendedText = message.message?.extendedTextMessage
+    const conversation = message.message?.conversation
+    
+    let mentionedJid = null
+    
+    // Tentar pegar da mensagem extendida
+    if (extendedText?.contextInfo?.mentionedJid) {
+        mentionedJid = extendedText.contextInfo.mentionedJid[0]
+        console.log('📍 Menção encontrada em extendedText:', mentionedJid)
     }
+    
+    // Se não encontrou, tentar pegar de participant (para mensagens quotadas)
+    if (!mentionedJid && extendedText?.contextInfo?.participant) {
+        mentionedJid = extendedText.contextInfo.participant
+        console.log('📍 Menção encontrada em participant:', mentionedJid)
+    }
+    
+    // Log da estrutura completa para debug
+    console.log('📨 Estrutura da mensagem:', JSON.stringify({
+        hasExtendedText: !!extendedText,
+        hasContextInfo: !!extendedText?.contextInfo,
+        mentionedJid: extendedText?.contextInfo?.mentionedJid,
+        participant: extendedText?.contextInfo?.participant,
+        quotedMessage: !!extendedText?.contextInfo?.quotedMessage
+    }, null, 2))
+    
+    if (mentionedJid) {
+        const cleanNumber = mentionedJid.replace('@s.whatsapp.net', '')
+        console.log('✅ Número mencionado extraído:', cleanNumber)
+        return cleanNumber
+    }
+    
+    console.log('❌ Nenhuma menção encontrada')
     return null
 }
 
@@ -170,8 +221,11 @@ async function startBot() {
 
             // Comando para remover usuário (!kick @usuario)
             if (command === 'kick' || command === 'remover' || command === 'remove') {
+                console.log('🔨 Comando kick executado por:', senderNumber)
+                
                 // Verificar se o remetente é admin
-                if (!isAdmin(senderNumber)) {
+                if (!isAdmin(senderNumber, sock)) {
+                    console.log('❌ Usuário não é admin')
                     await sock.sendMessage(groupId, {
                         text: '❌ Você não tem permissão para usar este comando.',
                         quoted: message
@@ -179,32 +233,68 @@ async function startBot() {
                     return
                 }
 
+                console.log('✅ Usuário é admin, processando menção...')
+                
                 // Verificar se há usuário mencionado
                 const mentionedNumber = getMentionedNumber(message)
                 if (!mentionedNumber) {
+                    console.log('❌ Nenhum usuário mencionado')
                     await sock.sendMessage(groupId, {
-                        text: '❌ Você precisa mencionar um usuário para remover.\nUso: `!kick @usuario`',
+                        text: '❌ Você precisa mencionar um usuário para remover.\nUso: `!kick @usuario`\n\n💡 Certifique-se de mencionar o usuário (@) na mensagem.',
                         quoted: message
                     })
                     return
                 }
 
+                console.log('🎯 Tentando remover usuário:', mentionedNumber)
+                
                 try {
+                    // Verificar se o bot tem permissões no grupo
+                    const groupMetadata = await sock.groupMetadata(groupId)
+                    const botNumber = sock.user.id.replace(':.*', '').replace('@s.whatsapp.net', '')
+                    const botParticipant = groupMetadata.participants.find(p => p.id.includes(botNumber))
+                    
+                    console.log('🤖 Bot número:', botNumber)
+                    console.log('👥 Participante do bot:', botParticipant?.admin)
+                    
+                    if (!botParticipant || !botParticipant.admin) {
+                        await sock.sendMessage(groupId, {
+                            text: '❌ Erro: O bot precisa ser administrador do grupo para remover usuários.\n\n👨‍💼 Por favor, promova o bot a administrador.',
+                            quoted: message
+                        })
+                        return
+                    }
+                    
                     // Remover o usuário do grupo
                     const targetJid = mentionedNumber + '@s.whatsapp.net'
-                    await sock.groupParticipantsUpdate(groupId, [targetJid], 'remove')
+                    console.log('🎯 Removendo:', targetJid)
+                    
+                    const result = await sock.groupParticipantsUpdate(groupId, [targetJid], 'remove')
+                    console.log('📤 Resultado da remoção:', result)
                     
                     await sock.sendMessage(groupId, {
-                        text: `✅ Usuário @${mentionedNumber} foi removido do grupo pelos administradores.`,
-                        mentions: [targetJid],
+                        text: `✅ Usuário foi removido do grupo pelos administradores.\n\n👤 Removido por: Admin\n⚖️ Motivo: Comando administrativo`,
                         quoted: message
                     })
                     
                     console.log(`🔨 Admin ${senderNumber} removeu ${mentionedNumber} do grupo ${groupId}`)
+                    
                 } catch (error) {
-                    console.error('❌ Erro ao remover usuário:', error)
+                    console.error('❌ Erro detalhado ao remover usuário:', error)
+                    console.error('📋 Stack trace:', error.stack)
+                    
+                    let errorMessage = '❌ Erro ao remover usuário.\n\n'
+                    
+                    if (error.output?.statusCode === 403) {
+                        errorMessage += '🚫 O bot não tem permissão para remover este usuário.\n• Verifique se o bot é administrador do grupo\n• O usuário pode ser um admin que não pode ser removido'
+                    } else if (error.output?.statusCode === 404) {
+                        errorMessage += '👻 Usuário não encontrado no grupo ou já foi removido.'
+                    } else {
+                        errorMessage += `🔍 Detalhes técnicos: ${error.message}\n\n💡 Possíveis soluções:\n• Certifique-se que o bot é admin\n• Verifique se o usuário ainda está no grupo\n• Tente novamente em alguns segundos`
+                    }
+                    
                     await sock.sendMessage(groupId, {
-                        text: '❌ Erro ao remover usuário. Verifique se o bot tem permissão de administrador.',
+                        text: errorMessage,
                         quoted: message
                     })
                 }
@@ -212,11 +302,20 @@ async function startBot() {
 
             // Comando de ajuda
             if (command === 'help' || command === 'ajuda') {
-                const helpText = `🤖 *Comandos do Bot*
+                const isUserAdmin = isAdmin(senderNumber, sock)
+                let helpText = `🤖 *Comandos do Bot*
 
 *Para Administradores:*
 • \`${config.prefix}kick @usuario\` - Remove um usuário do grupo
-• \`${config.prefix}remover @usuario\` - Remove um usuário do grupo
+• \`${config.prefix}remover @usuario\` - Remove um usuário do grupo`
+
+                if (isUserAdmin) {
+                    helpText += `
+• \`${config.prefix}debug\` - Informações técnicas do bot
+• \`${config.prefix}testmention @usuario\` - Testar detecção de menções`
+                }
+
+                helpText += `
 
 *Geral:*
 • \`${config.prefix}help\` - Mostra esta mensagem
@@ -224,7 +323,9 @@ async function startBot() {
 
 *Funcionalidades Automáticas:*
 ✅ Mensagem de boas-vindas para novos membros
-✅ Sistema de moderação administrativo`
+✅ Sistema de moderação administrativo
+
+${!isUserAdmin ? '💡 *Você não é administrador - alguns comandos não estão visíveis*' : '👨‍💼 *Você é administrador - comandos completos disponíveis*'}`
 
                 await sock.sendMessage(groupId, {
                     text: helpText,
@@ -236,6 +337,58 @@ async function startBot() {
             if (command === 'regras' || command === 'rules') {
                 await sock.sendMessage(groupId, {
                     text: WELCOME_MESSAGE,
+                    quoted: message
+                })
+            }
+
+            // Comando de debug (apenas para admins)
+            if (command === 'debug' && isAdmin(senderNumber, sock)) {
+                const botOwnerNumber = sock.user?.id?.replace(':.*', '').replace('@s.whatsapp.net', '') || 'Não disponível'
+                const debugInfo = `🔧 *Informações de Debug*
+
+📱 *Seu número:* ${senderNumber.replace('@s.whatsapp.net', '')}
+👥 *Admins configurados:* ${config.admins.join(', ')}
+👑 *Owner configurado:* ${config.ownerNumber}
+🤖 *Bot número conectado:* ${botOwnerNumber}
+📍 *Grupo ID:* ${groupId}
+
+💡 *Sistema de Verificação:*
+✅ Admins configurados em config.json
+✅ Owner configurado em config.json  
+✅ Dono do número conectado ao bot
+
+💡 Para testar menção, use: \`!testmention @usuario\``
+
+                await sock.sendMessage(groupId, {
+                    text: debugInfo,
+                    quoted: message
+                })
+            }
+
+            // Comando para testar extração de menção
+            if (command === 'testmention' && isAdmin(senderNumber, sock)) {
+                console.log('🧪 Testando extração de menção...')
+                const mentionedNumber = getMentionedNumber(message)
+                
+                const testResult = `🧪 *Teste de Menção*
+
+${mentionedNumber ? 
+    `✅ Menção encontrada: ${mentionedNumber}` : 
+    '❌ Nenhuma menção detectada'
+}
+
+📋 *Estrutura da mensagem:*
+\`\`\`
+${JSON.stringify(message.message, null, 2)}
+\`\`\`
+
+💡 Se não detectou a menção, tente:
+1. Mencionar tocando no nome do usuário
+2. Usar @ seguido do nome completo
+3. Verificar se está realmente mencionando`
+
+                await sock.sendMessage(groupId, {
+                    text: testResult,
                     quoted: message
                 })
             }

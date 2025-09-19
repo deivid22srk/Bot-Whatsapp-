@@ -10,11 +10,36 @@ Bot completo para WhatsApp com funcionalidades de moderação e gerenciamento de
 - 👨‍💼 **Sistema de Admins**: Controle de permissões por número
 - 📱 **Compatível com Termux**: Funciona perfeitamente no Android
 
+## 👨‍💼 Sistema de Administradores
+
+O bot reconhece administradores de **3 formas diferentes**:
+
+### 1. 🤖 **Dono do Número Conectado** (Automático)
+- A pessoa que escaneou o QR Code e conectou o bot
+- **Automaticamente** tem todos os privilégios de administrador
+- **Não precisa** estar configurado no `config.json`
+
+### 2. 👑 **Owner Configurado**
+- Número definido em `config.json` no campo `ownerNumber`
+- Tem privilégios máximos de administrador
+
+### 3. 👥 **Admins Configurados**
+- Números definidos em `config.json` no array `admins`
+- Podem usar todos os comandos administrativos
+
+**Exemplo de prioridade:**
+1. Dono do número conectado = Admin ✅
+2. Owner configurado = Admin ✅  
+3. Admins configurados = Admin ✅
+4. Outros usuários = Sem privilégios ❌
+
 ## 📋 Comandos Disponíveis
 
 ### Para Administradores:
 - `!kick @usuario` - Remove um usuário do grupo
 - `!remover @usuario` - Remove um usuário do grupo (comando alternativo)
+- `!debug` - Mostra informações técnicas do bot (admin only)
+- `!testmention @usuario` - Testa detecção de menções (admin only)
 
 ### Para Todos:
 - `!help` ou `!ajuda` - Mostra lista de comandos
@@ -49,6 +74,12 @@ termux-setup-storage
 
 ### 4. Clonar o repositório
 ```bash
+# Método 1: Diretório home (Recomendado - evita problemas de permissão)
+cd ~
+git clone https://github.com/deivid22srk/Bot-Whatsapp-.git
+cd Bot-Whatsapp-
+
+# Método 2: Storage compartilhado (pode ter problemas de permissão)
 cd storage/shared
 git clone https://github.com/deivid22srk/Bot-Whatsapp-.git
 cd Bot-Whatsapp-
@@ -56,8 +87,19 @@ cd Bot-Whatsapp-
 
 ### 5. Instalar dependências do Node.js
 ```bash
+# Instalação normal
 npm install
+
+# Se der erro de permissão no storage/shared:
+npm config set bin-links false
+npm install --no-bin-links
+
+# Alternativa com yarn:
+npm install -g yarn
+yarn install
 ```
+
+> 💡 **Dica**: Se tiver problemas de permissão, use o diretório home (`cd ~`) ao invés do storage compartilhado.
 
 ### 6. Configurar administradores
 ```bash
@@ -78,6 +120,8 @@ nano config.json
 ```
 
 > ⚠️ **Importante**: Use números no formato internacional sem símbolos (ex: 5511999999999)
+
+> 💡 **Dica**: O dono do número conectado ao bot é automaticamente reconhecido como administrador, mesmo que não esteja na lista!
 
 ### 7. Iniciar o bot
 ```bash
@@ -176,15 +220,52 @@ rm -rf auth_info/
 
 ## 🛠️ Solução de Problemas
 
+### Erro de instalação (EACCES: permission denied):
+```bash
+# Solução 1: Instalar no diretório home
+cd ~
+rm -rf Bot-Whatsapp-
+git clone https://github.com/deivid22srk/Bot-Whatsapp-.git
+cd Bot-Whatsapp-
+npm install
+
+# Solução 2: Configurar npm
+npm config set bin-links false
+npm install --no-bin-links
+
+# Solução 3: Usar yarn
+npm install -g yarn
+yarn install
+```
+
+### Comando !kick não funciona:
+```bash
+# 1. Verificar se você é admin
+!debug
+
+# 2. Testar detecção de menção
+!testmention @usuario
+
+# 3. Verificar configuração
+nano config.json
+```
+
+**Checklist para !kick:**
+- [ ] Seu número está em `config.json`?
+- [ ] Bot é administrador do grupo?
+- [ ] Está mencionando o usuário corretamente?
+- [ ] Usuario mencionado não é admin?
+
 ### Bot não conecta:
 - Verifique sua conexão com a internet
 - Tente deletar a pasta `auth_info` e reconectar
 - Certifique-se de que o Termux tem permissão de rede
 
 ### Comandos não funcionam:
-- Verifique se o bot tem permissões de administrador no grupo
+- Use `!debug` para verificar informações técnicas
 - Confirme se seu número está na lista de admins no `config.json`
 - Use o formato correto: `!kick @usuario` (mencionando o usuário)
+- Verifique os logs no terminal do Termux
 
 ### Bot para de funcionar:
 - Use `screen` para manter sessões persistentes
