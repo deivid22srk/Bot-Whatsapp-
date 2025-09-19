@@ -1,26 +1,73 @@
 # 🔧 Guia de Solução de Problemas
 
+## 🆕 **NOVA FUNCIONALIDADE: Detecção Automática de Admins**
+
+### 🎯 **A Mudança Mais Importante**
+
+**ANTES** (versão anterior):
+- ❌ Só funcionava com números configurados no `config.json`
+- ❌ Precisava configurar cada admin manualmente
+- ❌ Se alguém virasse admin do grupo, não funcionava
+
+**AGORA** (versão atual):
+- ✅ **Qualquer admin do grupo pode usar comandos automaticamente**
+- ✅ **Não precisa configurar nada**
+- ✅ **Funciona imediatamente** quando alguém vira admin
+
+### 🔍 **Como Funciona**
+
+1. **Você manda** `!kick @usuario`
+2. **Bot verifica** se você é admin do grupo WhatsApp
+3. **Se for admin** → Comando funciona ✅
+4. **Se não for admin** → Comando é negado ❌
+
+### 🧪 **Para Testar**
+
+```
+!debug
+```
+
+Vai mostrar:
+- ✅ Seu status como admin
+- 📋 Lista de todos os admins do grupo
+- 🔧 Informações técnicas
+
+### 💡 **Vantagens**
+
+- **Dinâmico**: Promoveu alguém? Funciona na hora
+- **Sem configuração**: Zero configuração necessária
+- **Intuitivo**: Admin do grupo = pode usar comandos
+- **Flexível**: Funciona em múltiplos grupos diferentes
+
+---
+
 ## ❌ Problema: Comando !kick não remove usuário
 
 ### 🔍 **Possíveis Causas e Soluções**
 
 #### 1. **Seu número não está configurado como admin**
 
-**O bot reconhece 3 tipos de administradores:**
+**O bot reconhece 4 tipos de administradores:**
 
 1. **🤖 Dono do número conectado (AUTOMÁTICO)**
    - Quem escaneou o QR Code é admin automaticamente
    - Não precisa configurar nada!
 
-2. **👑 Owner configurado**
+2. **👥 🆕 Admin do grupo atual (AUTOMÁTICO)**
+   - **QUALQUER ADMIN** do grupo WhatsApp pode usar comandos
+   - **Detecção automática** - não precisa configurar
+   - Promoveu alguém a admin? Pode usar comandos imediatamente
+   - **A solução mais comum!**
+
+3. **👑 Owner configurado**
 ```bash
-# Abrir arquivo de configuração
+# Abrir arquivo de configuração (OPCIONAL)
 nano config.json
 ```
 
-3. **👥 Admins configurados**
+4. **📋 Admins configurados**
 ```bash
-# Verificar se seu número está na lista:
+# Verificar se seu número está na lista (OPCIONAL):
 nano config.json
 ```
 
@@ -96,6 +143,7 @@ O novo `!kick` mostra mais informações sobre erros.
 ### 📋 **Checklist de Verificação**
 
 - [ ] Sou o dono do número conectado ao bot? (Admin automático)
+- [ ] **🆕 OU sou admin do grupo atual?** (Admin automático - MAIS COMUM)
 - [ ] OU meu número está em `config.json` como owner?
 - [ ] OU meu número está em `config.json` na lista de admins?
 - [ ] O bot é administrador do grupo?
@@ -103,6 +151,8 @@ O novo `!kick` mostra mais informações sobre erros.
 - [ ] O usuário mencionado ainda está no grupo?
 - [ ] O usuário mencionado não é um admin?
 - [ ] O bot está rodando sem erros?
+
+> 💡 **Dica**: A forma mais comum de usar o bot é sendo admin do grupo! O bot detecta automaticamente quem são os admins.
 
 ### 🚨 **Mensagens de Erro Comuns**
 

@@ -73,18 +73,18 @@ function createExampleConfig() {
 }
 
 // Verificar se o usuário é admin
-function isAdmin(userNumber, sock = null) {
+async function isAdmin(userNumber, sock = null, groupId = null) {
     const cleanNumber = userNumber.replace('@s.whatsapp.net', '')
     console.log('\n🔐 ======== VERIFICAÇÃO DE ADMIN ========')
     console.log('🔍 Verificando admin:', cleanNumber)
     console.log('📋 Admins configurados:', config.admins)
     console.log('👑 Owner configurado:', config.ownerNumber)
     
-    // Verificar se é admin configurado ou owner configurado
+    // 1. Verificar se é admin configurado ou owner configurado
     let isAdminUser = config.admins.includes(cleanNumber) || cleanNumber === config.ownerNumber
     console.log('✅ É admin/owner configurado?', isAdminUser)
     
-    // Verificar se é o dono do número conectado ao bot
+    // 2. Verificar se é o dono do número conectado ao bot
     if (sock && sock.user && sock.user.id) {
         const botOwnerNumber = sock.user.id.replace(':.*', '').replace('@s.whatsapp.net', '')
         console.log('🤖 Número do bot conectado:', botOwnerNumber)
@@ -92,14 +92,39 @@ function isAdmin(userNumber, sock = null) {
         if (cleanNumber === botOwnerNumber) {
             console.log('👑 ✅ USUÁRIO É O DONO DO NÚMERO CONECTADO AO BOT!')
             isAdminUser = true
-        } else {
-            console.log('❌ Usuário NÃO é o dono do número conectado')
         }
-    } else {
-        console.log('⚠️ Sock ou sock.user não disponível para verificar dono')
-        console.log('   - sock:', !!sock)
-        console.log('   - sock.user:', !!sock?.user)
-        console.log('   - sock.user.id:', sock?.user?.id)
+    }
+    
+    // 3. NOVO: Verificar se é admin do grupo atual
+    if (!isAdminUser && sock && groupId && groupId.endsWith('@g.us')) {
+        try {
+            console.log('👥 Verificando se é admin do grupo:', groupId)
+            const groupMetadata = await sock.groupMetadata(groupId)
+            console.log('🏠 Nome do grupo:', groupMetadata.subject)
+            console.log('📄 Total de participantes:', groupMetadata.participants.length)
+            
+            // Encontrar participante
+            const participant = groupMetadata.participants.find(p => {
+                const participantNumber = p.id.replace('@s.whatsapp.net', '')
+                return participantNumber === cleanNumber
+            })
+            
+            if (participant) {
+                console.log('👤 Participante encontrado:', participant.id)
+                console.log('🛡️ Status no grupo:', participant.admin || 'member')
+                
+                if (participant.admin === 'admin' || participant.admin === 'superadmin') {
+                    console.log('🏅 ✅ USUÁRIO É ADMINISTRADOR DO GRUPO!')
+                    isAdminUser = true
+                } else {
+                    console.log('❌ Usuário é apenas membro do grupo')
+                }
+            } else {
+                console.log('⚠️ Participante não encontrado no grupo')
+            }
+        } catch (error) {
+            console.error('❌ Erro ao verificar admins do grupo:', error.message)
+        }
     }
     
     console.log('🎯 RESULTADO FINAL - É admin?', isAdminUser)
@@ -250,10 +275,10 @@ async function startBot() {
                 console.log('🔨 Comando kick executado por:', senderNumber)
                 
                 // Verificar se o remetente é admin
-                if (!isAdmin(senderNumber, sock)) {
+                if (!(await isAdmin(senderNumber, sock, groupId))) {
                     console.log('❌ Usuário não é admin')
                     await sock.sendMessage(groupId, {
-                        text: '❌ Você não tem permissão para usar este comando.',
+                        text: '❌ Você não tem permissão para usar este comando.\n\n📝 Para usar comandos administrativos você deve ser:\n• Admin do grupo atual\n• Owner/Admin configurado no bot\n• Dono do número conectado',
                         quoted: message
                     })
                     return
@@ -328,7 +353,7 @@ async function startBot() {
 
             // Comando de ajuda
             if (command === 'help' || command === 'ajuda') {
-                const isUserAdmin = isAdmin(senderNumber, sock)
+                const isUserAdmin = await isAdmin(senderNumber, sock, groupId)
                 let helpText = `🤖 *Comandos do Bot*
 
 *Para Administradores:*
@@ -368,22 +393,39 @@ ${!isUserAdmin ? '💡 *Você não é administrador - alguns comandos não estã
             }
 
             // Comando de debug (apenas para admins)
-            if (command === 'debug' && isAdmin(senderNumber, sock)) {
+            if (command === 'debug' && (await isAdmin(senderNumber, sock, groupId))) {
                 const botOwnerNumber = sock.user?.id?.replace(':.*', '').replace('@s.whatsapp.net', '') || 'Não disponível'
+                
+                // Obter informações dos admins do grupo
+                let groupAdminsInfo = ''
+                try {
+                    const groupMetadata = await sock.groupMetadata(groupId)
+                    const groupAdmins = groupMetadata.participants
+                        .filter(p => p.admin === 'admin' || p.admin === 'superadmin')
+                        .map(p => p.id.replace('@s.whatsapp.net', ''))
+                    
+                    groupAdminsInfo = `
+👥 *Admins do Grupo:* ${groupAdmins.length} encontrados
+${groupAdmins.map(admin => `   • ${admin}`).join('\n')}`
+                } catch (error) {
+                    groupAdminsInfo = '\n⚠️ *Erro ao obter admins do grupo*'
+                }
+                
                 const debugInfo = `🔧 *Informações de Debug*
 
 📱 *Seu número:* ${senderNumber.replace('@s.whatsapp.net', '')}
-👥 *Admins configurados:* ${config.admins.join(', ')}
-👑 *Owner configurado:* ${config.ownerNumber}
+👑 *Owner configurado:* ${config.ownerNumber || 'Não configurado'}
+📋 *Admins configurados:* ${config.admins.length > 0 ? config.admins.join(', ') : 'Nenhum'}
 🤖 *Bot número conectado:* ${botOwnerNumber}
-📍 *Grupo ID:* ${groupId}
+📍 *Grupo ID:* ${groupId}${groupAdminsInfo}
 
-💡 *Sistema de Verificação:*
-✅ Admins configurados em config.json
-✅ Owner configurado em config.json  
+💡 *Sistema de Admin (4 tipos):*
 ✅ Dono do número conectado ao bot
+✅ Owner configurado em config.json  
+✅ Admins configurados em config.json
+✅ **NOVO: Admins do grupo atual**
 
-💡 Para testar menção, use: \`!testmention @usuario\``
+💡 Para testar menção: \`!testmention @usuario\``
 
                 await sock.sendMessage(groupId, {
                     text: debugInfo,
@@ -392,7 +434,7 @@ ${!isUserAdmin ? '💡 *Você não é administrador - alguns comandos não estã
             }
 
             // Comando para testar extração de menção
-            if (command === 'testmention' && isAdmin(senderNumber, sock)) {
+            if (command === 'testmention' && (await isAdmin(senderNumber, sock, groupId))) {
                 console.log('🧪 Testando extração de menção...')
                 const mentionedNumber = getMentionedNumber(message)
                 

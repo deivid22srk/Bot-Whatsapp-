@@ -12,30 +12,37 @@ Bot completo para WhatsApp com funcionalidades de moderação e gerenciamento de
 
 ## 👨‍💼 Sistema de Administradores
 
-O bot reconhece administradores de **3 formas diferentes**:
+O bot reconhece administradores de **4 formas diferentes**:
 
 ### 1. 🤖 **Dono do Número Conectado** (Automático)
 - A pessoa que escaneou o QR Code e conectou o bot
 - **Automaticamente** tem todos os privilégios de administrador
 - **Não precisa** estar configurado no `config.json`
 
-### 2. 👑 **Owner Configurado**
+### 2. 👥 **🆕 Admins do Grupo** (Automático)
+- **QUALQUER ADMIN** do grupo WhatsApp onde o comando foi enviado
+- **Detecção automática** - não precisa configurar nada
+- Se você é admin do grupo, pode usar comandos administrativos
+- **Dinâmico**: promoveu alguém a admin? Pode usar comandos imediatamente
+
+### 3. 👑 **Owner Configurado**
 - Número definido em `config.json` no campo `ownerNumber`
 - Tem privilégios máximos de administrador
 
-### 3. 👥 **Admins Configurados**
+### 4. 📋 **Admins Configurados**
 - Números definidos em `config.json` no array `admins`
 - Podem usar todos os comandos administrativos
 
 **Exemplo de prioridade:**
 1. Dono do número conectado = Admin ✅
-2. Owner configurado = Admin ✅  
-3. Admins configurados = Admin ✅
-4. Outros usuários = Sem privilégios ❌
+2. **Admin do grupo atual** = Admin ✅ 🆕
+3. Owner configurado = Admin ✅  
+4. Admins configurados = Admin ✅
+5. Outros usuários = Sem privilégios ❌
 
 ## 📋 Comandos Disponíveis
 
-### Para Administradores:
+### Para Administradores (qualquer admin do grupo + configurados):
 - `!kick @usuario` - Remove um usuário do grupo
 - `!remover @usuario` - Remove um usuário do grupo (comando alternativo)
 - `!debug` - Mostra informações técnicas do bot (admin only)
@@ -101,27 +108,31 @@ yarn install
 
 > 💡 **Dica**: Se tiver problemas de permissão, use o diretório home (`cd ~`) ao invés do storage compartilhado.
 
-### 6. Configurar administradores
+### 6. Configurar administradores (OPCIONAL)
 ```bash
-# Editar o arquivo config.json com os números dos admins
+# Editar o arquivo config.json com os números dos admins (OPCIONAL)
 nano config.json
 ```
 
-**Exemplo de configuração:**
+**⚡ NOVIDADE: Configuração opcional!**
+- ✅ **Admins do grupo são detectados automaticamente**
+- ✅ **Dono do número conectado é admin automaticamente**
+- ✅ **Configuração só necessária para admins extras**
+
+**Exemplo de configuração (opcional):**
 ```json
 {
   "ownerNumber": "5511999999999",
   "admins": [
     "5511999999999",
-    "5511888888888",
-    "5511777777777"
+    "5511888888888"
   ]
 }
 ```
 
 > ⚠️ **Importante**: Use números no formato internacional sem símbolos (ex: 5511999999999)
 
-> 💡 **Dica**: O dono do número conectado ao bot é automaticamente reconhecido como administrador, mesmo que não esteja na lista!
+> 💡 **Dica**: O bot funciona perfeitamente sem configurar nada! Admins do grupo e dono do número conectado são reconhecidos automaticamente.
 
 ### 7. Iniciar o bot
 ```bash
