@@ -314,15 +314,44 @@ async function startBot() {
                 try {
                     // Verificar se o bot tem permissões no grupo
                     const groupMetadata = await sock.groupMetadata(groupId)
-                    const botNumber = sock.user.id.replace(':.*', '').replace('@s.whatsapp.net', '')
-                    const botParticipant = groupMetadata.participants.find(p => p.id.includes(botNumber))
                     
-                    console.log('🤖 Bot número:', botNumber)
-                    console.log('👥 Participante do bot:', botParticipant?.admin)
+                    // Extrair número do bot corretamente
+                    const botRawId = sock.user.id
+                    const botNumber = botRawId.split(':')[0]  // Pega apenas a parte antes do ':'
+                    const botJid = botNumber + '@s.whatsapp.net'
                     
-                    if (!botParticipant || !botParticipant.admin) {
+                    console.log('🔍 === VERIFICAÇÃO DO BOT COMO ADMIN ===')
+                    console.log('🤖 Bot ID bruto:', botRawId)
+                    console.log('🤖 Bot número extraído:', botNumber)
+                    console.log('🤖 Bot JID completo:', botJid)
+                    console.log('👥 Total de participantes:', groupMetadata.participants.length)
+                    
+                    // Encontrar bot na lista de participantes
+                    const botParticipant = groupMetadata.participants.find(p => {
+                        console.log('🔍 Comparando:', p.id, 'com', botJid)
+                        return p.id === botJid || p.id.includes(botNumber)
+                    })
+                    
+                    console.log('👤 Bot encontrado:', !!botParticipant)
+                    console.log('🛡️ Status do bot:', botParticipant?.admin || 'member')
+                    console.log('===========================================')
+                    
+                    if (!botParticipant) {
                         await sock.sendMessage(groupId, {
-                            text: '❌ Erro: O bot precisa ser administrador do grupo para remover usuários.\n\n👨‍💼 Por favor, promova o bot a administrador.',
+                            text: '❌ Erro: Bot não encontrado na lista de participantes do grupo.\n\n🤖 O bot precisa estar no grupo para funcionar.\n📱 Verifique se o bot foi removido acidentalmente.',
+                            quoted: message
+                        })
+                        return
+                    }
+                    
+                    if (!botParticipant.admin) {
+                        // Listar quem são os admins para ajudar o usuário
+                        const groupAdmins = groupMetadata.participants
+                            .filter(p => p.admin === 'admin' || p.admin === 'superadmin')
+                            .map(p => p.id.replace('@s.whatsapp.net', ''))
+                        
+                        await sock.sendMessage(groupId, {
+                            text: `❌ Erro: O bot não é administrador do grupo.\n\n📄 **Como resolver:**\n1. Abra "Informações do grupo"\n2. Toque em "Participantes"\n3. Encontre o bot na lista\n4. Toque no nome do bot\n5. Selecione "Tornar administrador"\n\n👥 **Admins atuais:** ${groupAdmins.length}\n${groupAdmins.map(admin => `• ${admin}`).join('\n')}\n\n🤖 **Bot:** ${botNumber} (precisa ser promovido)`,
                             quoted: message
                         })
                         return
@@ -376,7 +405,8 @@ async function startBot() {
                     helpText += `
 • \`${config.prefix}debug\` - Informações técnicas do bot
 • \`${config.prefix}testmention @usuario\` - Testar detecção de menções
-• \`${config.prefix}testowner\` - Testar se você é reconhecido como dono`
+• \`${config.prefix}testowner\` - Testar se você é reconhecido como dono
+• \`${config.prefix}botadmin\` - Verificar se bot é admin do grupo`
                 }
 
                 helpText += `
@@ -385,6 +415,7 @@ async function startBot() {
 • \`${config.prefix}help\` - Mostra esta mensagem
 • \`${config.prefix}regras\` - Exibe as regras do grupo
 • \`${config.prefix}testowner\` - Testa se você é reconhecido como dono
+• \`${config.prefix}botadmin\` - Verifica se o bot é admin do grupo
 
 *Funcionalidades Automáticas:*
 ✅ Mensagem de boas-vindas para novos membros
@@ -445,6 +476,53 @@ ${groupAdmins.map(admin => `   • ${admin}`).join('\n')}`
                     text: debugInfo,
                     quoted: message
                 })
+            }
+
+            // Comando para verificar se o bot é admin do grupo
+            if (command === 'botadmin' || command === 'checkbot') {
+                console.log('🧪 Verificando status do bot no grupo...')
+                
+                try {
+                    const groupMetadata = await sock.groupMetadata(groupId)
+                    const botRawId = sock.user.id
+                    const botNumber = botRawId.split(':')[0]
+                    const botJid = botNumber + '@s.whatsapp.net'
+                    
+                    const botParticipant = groupMetadata.participants.find(p => 
+                        p.id === botJid || p.id.includes(botNumber)
+                    )
+                    
+                    const groupAdmins = groupMetadata.participants
+                        .filter(p => p.admin === 'admin' || p.admin === 'superadmin')
+                        .map(p => `• ${p.id.replace('@s.whatsapp.net', '')} (${p.admin})`)
+                    
+                    const botStatus = `🤖 *Status do Bot no Grupo*
+
+🏠 **Grupo:** ${groupMetadata.subject}
+🤖 **Bot número:** ${botNumber}
+📍 **Bot no grupo:** ${botParticipant ? '✅ SIM' : '❌ NÃO'}
+🛡️ **Bot é admin:** ${botParticipant?.admin ? `✅ ${botParticipant.admin.toUpperCase()}` : '❌ NÃO'}
+
+👥 **Admins do grupo (${groupAdmins.length}):**
+${groupAdmins.join('\n')}
+
+💡 **Para promover o bot:**
+1. Informações do grupo
+2. Participantes  
+3. Encontrar bot (${botNumber})
+4. Tornar administrador`
+
+                    await sock.sendMessage(groupId, {
+                        text: botStatus,
+                        quoted: message
+                    })
+                    
+                } catch (error) {
+                    await sock.sendMessage(groupId, {
+                        text: `❌ Erro ao verificar status do bot: ${error.message}`,
+                        quoted: message
+                    })
+                }
             }
 
             // Comando para testar detecção do dono (especial para debug)
