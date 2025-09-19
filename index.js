@@ -75,12 +75,14 @@ function createExampleConfig() {
 // Verificar se o usuário é admin
 function isAdmin(userNumber, sock = null) {
     const cleanNumber = userNumber.replace('@s.whatsapp.net', '')
+    console.log('\n🔐 ======== VERIFICAÇÃO DE ADMIN ========')
     console.log('🔍 Verificando admin:', cleanNumber)
     console.log('📋 Admins configurados:', config.admins)
-    console.log('👑 Owner:', config.ownerNumber)
+    console.log('👑 Owner configurado:', config.ownerNumber)
     
     // Verificar se é admin configurado ou owner configurado
     let isAdminUser = config.admins.includes(cleanNumber) || cleanNumber === config.ownerNumber
+    console.log('✅ É admin/owner configurado?', isAdminUser)
     
     // Verificar se é o dono do número conectado ao bot
     if (sock && sock.user && sock.user.id) {
@@ -88,12 +90,20 @@ function isAdmin(userNumber, sock = null) {
         console.log('🤖 Número do bot conectado:', botOwnerNumber)
         
         if (cleanNumber === botOwnerNumber) {
-            console.log('👑 Usuário é o dono do número conectado ao bot!')
+            console.log('👑 ✅ USUÁRIO É O DONO DO NÚMERO CONECTADO AO BOT!')
             isAdminUser = true
+        } else {
+            console.log('❌ Usuário NÃO é o dono do número conectado')
         }
+    } else {
+        console.log('⚠️ Sock ou sock.user não disponível para verificar dono')
+        console.log('   - sock:', !!sock)
+        console.log('   - sock.user:', !!sock?.user)
+        console.log('   - sock.user.id:', sock?.user?.id)
     }
     
-    console.log('✅ É admin?', isAdminUser)
+    console.log('🎯 RESULTADO FINAL - É admin?', isAdminUser)
+    console.log('========================================\n')
     return isAdminUser
 }
 
@@ -202,8 +212,14 @@ async function startBot() {
     // Gerenciar mensagens recebidas
     sock.ev.on('messages.upsert', async ({ messages }) => {
         const message = messages[0]
-        if (!message.message) return
-        if (message.key.fromMe) return // Ignorar mensagens próprias
+        if (!message.message) {
+            console.log('⚠️ Mensagem sem conteúdo, ignorando...')
+            return
+        }
+        if (message.key.fromMe) {
+            console.log('🤖 Mensagem própria, ignorando...')
+            return // Ignorar mensagens próprias
+        }
 
         const messageText = message.message?.conversation || 
                           message.message?.extendedTextMessage?.text || ''
@@ -212,12 +228,22 @@ async function startBot() {
         const senderNumber = message.key.participant || message.key.remoteJid
         const groupId = message.key.remoteJid
 
-        console.log('📩 Mensagem recebida:', messageText.substring(0, 50) + '...')
+        console.log('\n================ MENSAGEM RECEBIDA ==================')
+        console.log('📝 Texto:', messageText)
+        console.log('👥 É grupo?', isGroup)
+        console.log('📱 Remetente:', senderNumber)
+        console.log('🏠 ID do grupo:', groupId)
+        console.log('🏷️ Começa com prefixo?', messageText.startsWith(config.prefix))
+        console.log('🔑 Prefixo configurado:', config.prefix)
+        console.log('==========================================')
 
         // Processar comandos apenas em grupos
         if (isGroup && messageText.startsWith(config.prefix)) {
+            console.log('🎆 COMANDO DETECTADO! Processando...')
             const args = messageText.slice(config.prefix.length).trim().split(' ')
             const command = args[0].toLowerCase()
+            console.log('🔥 Comando extraído:', command)
+            console.log('📋 Argumentos:', args)
 
             // Comando para remover usuário (!kick @usuario)
             if (command === 'kick' || command === 'remover' || command === 'remove') {
@@ -392,6 +418,13 @@ ${JSON.stringify(message.message, null, 2)}
                     quoted: message
                 })
             }
+        } else {
+            // Mensagem que não é comando ou não é em grupo
+            console.log('🚫 Mensagem não processada:')
+            console.log('   - É grupo?', isGroup)
+            console.log('   - Começa com prefixo?', messageText.startsWith(config.prefix))
+            console.log('   - Texto:', messageText.substring(0, 100))
+            console.log('   - Remetente:', senderNumber)
         }
     })
 
