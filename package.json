@@ -1,0 +1,20 @@
+{
+  "name": "bot-whatsapp",
+  "version": "1.0.0",
+  "description": "Bot WhatsApp para gerenciamento de grupos com funcionalidades administrativas",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "keywords": ["whatsapp", "bot", "termux", "baileys"],
+  "author": "deivid22srk",
+  "license": "MIT",
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.7",
+    "@hapi/boom": "^10.0.1",
+    "pino": "^8.17.2",
+    "qrcode-terminal": "^0.12.0"
+  }
+}
