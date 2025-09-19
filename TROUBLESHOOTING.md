@@ -5,12 +5,25 @@
 ### 🔍 **Possíveis Causas e Soluções**
 
 #### 1. **Seu número não está configurado como admin**
+
+**O bot reconhece 3 tipos de administradores:**
+
+1. **🤖 Dono do número conectado (AUTOMÁTICO)**
+   - Quem escaneou o QR Code é admin automaticamente
+   - Não precisa configurar nada!
+
+2. **👑 Owner configurado**
 ```bash
 # Abrir arquivo de configuração
 nano config.json
 ```
 
-**Verificar se seu número está na lista:**
+3. **👥 Admins configurados**
+```bash
+# Verificar se seu número está na lista:
+nano config.json
+```
+
 ```json
 {
   "ownerNumber": "5511999999999",
@@ -82,7 +95,9 @@ O novo `!kick` mostra mais informações sobre erros.
 
 ### 📋 **Checklist de Verificação**
 
-- [ ] Meu número está em `config.json`?
+- [ ] Sou o dono do número conectado ao bot? (Admin automático)
+- [ ] OU meu número está em `config.json` como owner?
+- [ ] OU meu número está em `config.json` na lista de admins?
 - [ ] O bot é administrador do grupo?
 - [ ] Estou mencionando corretamente o usuário?
 - [ ] O usuário mencionado ainda está no grupo?

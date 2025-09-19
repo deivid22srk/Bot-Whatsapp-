@@ -73,12 +73,26 @@ function createExampleConfig() {
 }
 
 // Verificar se o usuário é admin
-function isAdmin(userNumber) {
+function isAdmin(userNumber, sock = null) {
     const cleanNumber = userNumber.replace('@s.whatsapp.net', '')
     console.log('🔍 Verificando admin:', cleanNumber)
     console.log('📋 Admins configurados:', config.admins)
     console.log('👑 Owner:', config.ownerNumber)
-    const isAdminUser = config.admins.includes(cleanNumber) || cleanNumber === config.ownerNumber
+    
+    // Verificar se é admin configurado ou owner configurado
+    let isAdminUser = config.admins.includes(cleanNumber) || cleanNumber === config.ownerNumber
+    
+    // Verificar se é o dono do número conectado ao bot
+    if (sock && sock.user && sock.user.id) {
+        const botOwnerNumber = sock.user.id.replace(':.*', '').replace('@s.whatsapp.net', '')
+        console.log('🤖 Número do bot conectado:', botOwnerNumber)
+        
+        if (cleanNumber === botOwnerNumber) {
+            console.log('👑 Usuário é o dono do número conectado ao bot!')
+            isAdminUser = true
+        }
+    }
+    
     console.log('✅ É admin?', isAdminUser)
     return isAdminUser
 }
@@ -210,7 +224,7 @@ async function startBot() {
                 console.log('🔨 Comando kick executado por:', senderNumber)
                 
                 // Verificar se o remetente é admin
-                if (!isAdmin(senderNumber)) {
+                if (!isAdmin(senderNumber, sock)) {
                     console.log('❌ Usuário não é admin')
                     await sock.sendMessage(groupId, {
                         text: '❌ Você não tem permissão para usar este comando.',
@@ -288,7 +302,7 @@ async function startBot() {
 
             // Comando de ajuda
             if (command === 'help' || command === 'ajuda') {
-                const isUserAdmin = isAdmin(senderNumber)
+                const isUserAdmin = isAdmin(senderNumber, sock)
                 let helpText = `🤖 *Comandos do Bot*
 
 *Para Administradores:*
@@ -328,14 +342,20 @@ ${!isUserAdmin ? '💡 *Você não é administrador - alguns comandos não estã
             }
 
             // Comando de debug (apenas para admins)
-            if (command === 'debug' && isAdmin(senderNumber)) {
+            if (command === 'debug' && isAdmin(senderNumber, sock)) {
+                const botOwnerNumber = sock.user?.id?.replace(':.*', '').replace('@s.whatsapp.net', '') || 'Não disponível'
                 const debugInfo = `🔧 *Informações de Debug*
 
 📱 *Seu número:* ${senderNumber.replace('@s.whatsapp.net', '')}
 👥 *Admins configurados:* ${config.admins.join(', ')}
-🤖 *Bot número:* ${sock.user.id.replace(':.*', '')}
+👑 *Owner configurado:* ${config.ownerNumber}
+🤖 *Bot número conectado:* ${botOwnerNumber}
 📍 *Grupo ID:* ${groupId}
-🔧 *Versão Baileys:* ${JSON.stringify(message.key)}
+
+💡 *Sistema de Verificação:*
+✅ Admins configurados em config.json
+✅ Owner configurado em config.json  
+✅ Dono do número conectado ao bot
 
 💡 Para testar menção, use: \`!testmention @usuario\``
 
@@ -346,7 +366,7 @@ ${!isUserAdmin ? '💡 *Você não é administrador - alguns comandos não estã
             }
 
             // Comando para testar extração de menção
-            if (command === 'testmention' && isAdmin(senderNumber)) {
+            if (command === 'testmention' && isAdmin(senderNumber, sock)) {
                 console.log('🧪 Testando extração de menção...')
                 const mentionedNumber = getMentionedNumber(message)
                 
