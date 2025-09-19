@@ -51,6 +51,8 @@ O bot reconhece administradores de **4 formas diferentes**:
 ### Para Todos:
 - `!help` ou `!ajuda` - Mostra lista de comandos
 - `!regras` - Exibe as regras do grupo
+- `!testowner` - Testa se é reconhecido como dono do bot
+- `!botadmin` - Verifica se o bot é administrador do grupo
 
 ## 🚀 Instalação no Termux
 
@@ -150,8 +152,23 @@ npm start
 
 ### Adicionando o Bot ao Grupo
 1. Adicione o número conectado ao bot no grupo
-2. Conceda permissões de **Administrador** para o bot
+2. **IMPORTANTE: Conceda permissões de Administrador para o bot**
 3. O bot começará a funcionar automaticamente
+
+### 🔧 Como Promover o Bot a Administrador:
+1. Abra o WhatsApp e vá ao grupo
+2. Toque em "Informações do grupo" (3 pontinhos → Informações do grupo)
+3. Toque em "Participantes" 
+4. Encontre o bot na lista de participantes
+5. Toque no nome do bot
+6. Selecione "Tornar administrador do grupo"
+7. Confirme a ação
+
+### 🧪 Verificar se o Bot é Admin:
+```
+!botadmin
+```
+Este comando mostra se o bot tem permissões de administrador.
 
 ### Removendo Usuários
 ```

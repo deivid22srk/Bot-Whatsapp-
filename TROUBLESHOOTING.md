@@ -86,11 +86,42 @@ nano config.json
 - ❌ Errado: `"+55 (11) 99999-9999"`
 
 #### 2. **Bot não é administrador do grupo**
-1. Abrir o grupo no WhatsApp
-2. Ir em "Informações do grupo" (3 pontinhos)
-3. Tocar em "Participantes"
-4. Encontrar o bot na lista
-5. Tocar no nome do bot → "Tornar administrador do grupo"
+
+**🚨 ERRO COMUM:**
+```
+❌ Erro: O bot precisa ser administrador do grupo para remover usuários.
+```
+
+**🔍 CAUSA:**
+- Você é admin do grupo ✅
+- Mas o **BOT** não é admin do grupo ❌
+- Duas coisas diferentes!
+
+**✅ SOLUÇÃO PASSO A PASSO:**
+
+1. **Verificar status do bot:**
+   ```
+   !botadmin
+   ```
+   Mostra se o bot é admin e lista todos os admins
+
+2. **Promover o bot:**
+   - Abrir WhatsApp → Grupo → "Informações do grupo"
+   - Tocar em "Participantes" 
+   - Encontrar o **bot** na lista (não você, o bot!)
+   - Tocar no nome do bot
+   - "Tornar administrador do grupo"
+
+3. **Confirmar:**
+   ```
+   !botadmin
+   ```
+   Deve mostrar "Bot é admin: ✅ ADMIN"
+
+**💡 DICA IMPORTANTE:**
+- **VOCÊ** precisa ser admin para usar comandos ✅
+- **O BOT** precisa ser admin para executar ações ✅
+- São duas verificações diferentes!
 
 #### 3. **Problema com menções**
 O WhatsApp às vezes não detecta menções corretamente.
@@ -146,13 +177,15 @@ O novo `!kick` mostra mais informações sobre erros.
 - [ ] **🆕 OU sou admin do grupo atual?** (Admin automático - MAIS COMUM)
 - [ ] OU meu número está em `config.json` como owner?
 - [ ] OU meu número está em `config.json` na lista de admins?
-- [ ] O bot é administrador do grupo?
+- [ ] **🤖 O BOT é administrador do grupo?** (Use `!botadmin` para verificar)
 - [ ] Estou mencionando corretamente o usuário?
 - [ ] O usuário mencionado ainda está no grupo?
 - [ ] O usuário mencionado não é um admin?
 - [ ] O bot está rodando sem erros?
 
 > 💡 **Dica**: A forma mais comum de usar o bot é sendo admin do grupo! O bot detecta automaticamente quem são os admins.
+
+> 🤖 **Importante**: O **BOT** também precisa ser admin do grupo para remover usuários! Use `!botadmin` para verificar.
 
 ### 🚨 **Mensagens de Erro Comuns**
 
