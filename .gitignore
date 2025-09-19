@@ -1,0 +1,35 @@
+# Dependências
+node_modules/
+package-lock.json
+yarn.lock
+
+# Arquivos de autenticação do WhatsApp
+auth_info/
+*.session
+*.json.bak
+
+# Logs
+*.log
+logs/
+
+# Arquivos temporários
+*.tmp
+*.temp
+.cache/
+
+# Configurações locais
+.env
+.env.local
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Termux
+*~
