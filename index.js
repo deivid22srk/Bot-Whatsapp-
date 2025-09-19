@@ -74,7 +74,7 @@ function createExampleConfig() {
 
 // Verificar se o usuário é admin
 async function isAdmin(userNumber, sock = null, groupId = null) {
-    const cleanNumber = userNumber.replace('@s.whatsapp.net', '')
+    const cleanNumber = userNumber.replace('@s.whatsapp.net', '').replace(':.*', '')
     console.log('\n🔐 ======== VERIFICAÇÃO DE ADMIN ========')
     console.log('🔍 Verificando admin:', cleanNumber)
     console.log('📋 Admins configurados:', config.admins)
@@ -88,6 +88,7 @@ async function isAdmin(userNumber, sock = null, groupId = null) {
     if (sock && sock.user && sock.user.id) {
         const botOwnerNumber = sock.user.id.replace(':.*', '').replace('@s.whatsapp.net', '')
         console.log('🤖 Número do bot conectado:', botOwnerNumber)
+        console.log('🎯 Comparando:', cleanNumber, '===', botOwnerNumber)
         
         if (cleanNumber === botOwnerNumber) {
             console.log('👑 ✅ USUÁRIO É O DONO DO NÚMERO CONECTADO AO BOT!')
@@ -103,10 +104,13 @@ async function isAdmin(userNumber, sock = null, groupId = null) {
             console.log('🏠 Nome do grupo:', groupMetadata.subject)
             console.log('📄 Total de participantes:', groupMetadata.participants.length)
             
-            // Encontrar participante
+            // Encontrar participante - more robust matching
             const participant = groupMetadata.participants.find(p => {
                 const participantNumber = p.id.replace('@s.whatsapp.net', '')
-                return participantNumber === cleanNumber
+                console.log('🔍 Comparando participante:', participantNumber, 'com', cleanNumber)
+                return participantNumber === cleanNumber || 
+                       p.id === userNumber || 
+                       p.id === (cleanNumber + '@s.whatsapp.net')
             })
             
             if (participant) {
@@ -241,21 +245,29 @@ async function startBot() {
             console.log('⚠️ Mensagem sem conteúdo, ignorando...')
             return
         }
-        if (message.key.fromMe) {
-            console.log('🤖 Mensagem própria, ignorando...')
-            return // Ignorar mensagens próprias
-        }
 
         const messageText = message.message?.conversation || 
                           message.message?.extendedTextMessage?.text || ''
         
+        // Se for mensagem própria, só processar se for comando
+        if (message.key.fromMe) {
+            if (!messageText.startsWith(config.prefix)) {
+                console.log('🤖 Mensagem própria sem comando, ignorando...')
+                return // Ignorar mensagens próprias que não são comandos
+            } else {
+                console.log('👑 🔥 MENSAGEM PRÓPRIA COM COMANDO DETECTADA! Processando...')
+            }
+        }
         const isGroup = message.key.remoteJid?.endsWith('@g.us')
-        const senderNumber = message.key.participant || message.key.remoteJid
+        const senderNumber = message.key.fromMe 
+            ? sock.user.id.replace(':.*', '')
+            : (message.key.participant || message.key.remoteJid)
         const groupId = message.key.remoteJid
 
         console.log('\n================ MENSAGEM RECEBIDA ==================')
         console.log('📝 Texto:', messageText)
         console.log('👥 É grupo?', isGroup)
+        console.log('🤖 É mensagem própria?', message.key.fromMe)
         console.log('📱 Remetente:', senderNumber)
         console.log('🏠 ID do grupo:', groupId)
         console.log('🏷️ Começa com prefixo?', messageText.startsWith(config.prefix))
@@ -363,7 +375,8 @@ async function startBot() {
                 if (isUserAdmin) {
                     helpText += `
 • \`${config.prefix}debug\` - Informações técnicas do bot
-• \`${config.prefix}testmention @usuario\` - Testar detecção de menções`
+• \`${config.prefix}testmention @usuario\` - Testar detecção de menções
+• \`${config.prefix}testowner\` - Testar se você é reconhecido como dono`
                 }
 
                 helpText += `
@@ -371,6 +384,7 @@ async function startBot() {
 *Geral:*
 • \`${config.prefix}help\` - Mostra esta mensagem
 • \`${config.prefix}regras\` - Exibe as regras do grupo
+• \`${config.prefix}testowner\` - Testa se você é reconhecido como dono
 
 *Funcionalidades Automáticas:*
 ✅ Mensagem de boas-vindas para novos membros
@@ -429,6 +443,35 @@ ${groupAdmins.map(admin => `   • ${admin}`).join('\n')}`
 
                 await sock.sendMessage(groupId, {
                     text: debugInfo,
+                    quoted: message
+                })
+            }
+
+            // Comando para testar detecção do dono (especial para debug)
+            if (command === 'testowner') {
+                console.log('🧪 === TESTE ESPECÍFICO DO DONO ===')
+                console.log('📱 Mensagem fromMe:', message.key.fromMe)
+                console.log('🔗 senderNumber calculado:', senderNumber)
+                console.log('🤖 sock.user.id:', sock.user?.id)
+                
+                const isOwner = await isAdmin(senderNumber, sock, groupId)
+                
+                const testResult = `🧪 *Teste de Reconhecimento do Dono*
+
+📱 *Mensagem própria?* ${message.key.fromMe ? '✅ SIM' : '❌ NÃO'}
+🔢 *Seu número:* ${senderNumber.replace('@s.whatsapp.net', '')}
+🤖 *Bot conectado:* ${sock.user?.id?.replace(':.*', '') || 'N/A'}
+🔐 *Reconhecido como admin?* ${isOwner ? '✅ SIM' : '❌ NÃO'}
+
+${isOwner ? 
+    '🎉 *SUCESSO!* Você está sendo reconhecido como dono do bot!' : 
+    '❌ *PROBLEMA!* Você NÃO está sendo reconhecido como dono.'
+}
+
+💡 Se não estiver funcionando, verifique os logs no terminal.`
+
+                await sock.sendMessage(groupId, {
+                    text: testResult,
                     quoted: message
                 })
             }
