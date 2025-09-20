@@ -312,8 +312,14 @@ function isGroupActive(groupId) {
     return isActive
 }
 
-// Obter comandos customizados
-function getCustomCommands() {
+// Obter comandos customizados (com reload dinâmico)
+async function getCustomCommands(forceReload = false) {
+    // Se forceReload é true ou não temos configuração, recarregar
+    if (forceReload || !webConfig || !webConfig.customCommands) {
+        console.log('🔄 [CUSTOM CMD] Recarregando comandos customizados...')
+        await loadWebConfig()
+    }
+    
     if (!webConfig) {
         console.log('⚠️ [CUSTOM CMD] webConfig não disponível')
         return []
@@ -327,17 +333,24 @@ function getCustomCommands() {
 
 // Processar comando customizado
 async function processCustomCommand(command, message, sock, senderNumber, groupId, isUserAdmin) {
-    const customCommands = getCustomCommands()
+    const customCommands = await getCustomCommands()
     
     console.log(`🔍 [CUSTOM CMD] Procurando comando '${command}' entre ${customCommands.length} comandos`)
     if (customCommands.length > 0) {
         console.log(`📝 [CUSTOM CMD] Comandos disponíveis: ${customCommands.map(c => c.command).join(', ')}`)
     }
     
-    const customCommand = customCommands.find(c => c.command === command)
+    let customCommand = customCommands.find(c => c.command === command)
+    
+    // Se não encontrou o comando, tentar recarregar uma vez
+    if (!customCommand) {
+        console.log(`🔄 [CUSTOM CMD] Comando '${command}' não encontrado, tentando reload...`)
+        const reloadedCommands = await getCustomCommands(true)
+        customCommand = reloadedCommands.find(c => c.command === command)
+    }
     
     if (!customCommand) {
-        console.log(`❌ [CUSTOM CMD] Comando '${command}' não encontrado`)
+        console.log(`❌ [CUSTOM CMD] Comando '${command}' não encontrado mesmo após reload`)
         return false
     }
     
@@ -528,6 +541,26 @@ async function startBot() {
                     await updateWebStatusHTTP(sock)
                 }
             }, 3000)
+            
+            // Configurar recarregamento automático das configurações web a cada 30 segundos
+            const configReloadInterval = setInterval(async () => {
+                try {
+                    const oldCommandsCount = webConfig?.customCommands?.length || 0
+                    await loadWebConfig()
+                    const newCommandsCount = webConfig?.customCommands?.length || 0
+                    
+                    if (newCommandsCount !== oldCommandsCount) {
+                        console.log(`🔄 [AUTO-RELOAD] Comandos customizados atualizados: ${oldCommandsCount} → ${newCommandsCount}`)
+                        if (webConfig?.customCommands?.length > 0) {
+                            console.log(`📝 [AUTO-RELOAD] Comandos disponíveis: ${webConfig.customCommands.map(c => c.command).join(', ')}`)
+                        }
+                    }
+                } catch (error) {
+                    console.log('⚠️ [AUTO-RELOAD] Erro ao recarregar configurações automaticamente:', error.message)
+                }
+            }, 30000) // 30 segundos
+            
+            console.log('🔄 Auto-reload de configurações ativado (a cada 30 segundos)')
             
             if (webServer) {
                 console.log('🌐 Painel web integrado - Status sincronizado')
@@ -775,7 +808,8 @@ async function startBot() {
 • \`${config.prefix}debug\` - Informações técnicas do bot
 • \`${config.prefix}testmention @usuario\` - Testar detecção de menções
 • \`${config.prefix}testowner\` - Testar se você é reconhecido como dono
-• \`${config.prefix}botadmin\` - Verificar se bot é admin do grupo`
+• \`${config.prefix}botadmin\` - Verificar se bot é admin do grupo
+• \`${config.prefix}reload\` - 🔄 Recarregar comandos customizados`
                 }
 
                 helpText += `
@@ -951,6 +985,39 @@ ${JSON.stringify(message.message, null, 2)}
                     text: testResult,
                     quoted: message
                 })
+            }
+
+            // Comando para recarregar configurações (apenas admins)
+            if (command === 'reload' && (await isAdmin(senderNumber, sock, groupId))) {
+                console.log('🔄 === RECARREGANDO CONFIGURAÇÕES ===')
+                try {
+                    // Forçar reload das configurações
+                    await loadWebConfig()
+                    const customCommands = await getCustomCommands(true)
+                    
+                    const reloadResult = `🔄 *Configurações Recarregadas*
+
+✅ *Sucesso!* As configurações foram atualizadas.
+
+📝 *Comandos customizados:* ${customCommands.length}
+${customCommands.length > 0 ? 
+    `\n🎯 *Disponíveis:*\n${customCommands.map(cmd => `• !${cmd.command} ${cmd.adminOnly ? '(🔐 admin)' : ''}`).join('\n')}` : 
+    '\n⚠️ Nenhum comando customizado configurado'
+}
+
+🕰️ *Atualizado:* ${new Date().toLocaleTimeString()}`
+
+                    await sock.sendMessage(groupId, {
+                        text: reloadResult,
+                        quoted: message
+                    })
+                } catch (error) {
+                    console.error('❌ Erro ao recarregar configurações:', error)
+                    await sock.sendMessage(groupId, {
+                        text: `❌ *Erro ao Recarregar*\n\n🔍 Detalhes: ${error.message}\n\n💡 Verifique se o painel web está rodando e tente novamente.`,
+                        quoted: message
+                    })
+                }
             }
         } else {
             // Mensagem não é comando - log mínimo
