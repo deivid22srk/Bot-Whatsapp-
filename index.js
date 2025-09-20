@@ -835,7 +835,7 @@ ${!isUserAdmin ? '💡 *Você não é administrador - alguns comandos não estã
 
 ---
 💡 ${config.donation.message}
-❤️ Use \`${config.prefix}pix\` para apoiar o projeto!
+❤️ Use \`${config.prefix}pix\` para apoiar o projeto!`
 
                 await sock.sendMessage(groupId, {
                     text: helpText,
@@ -850,7 +850,7 @@ ${!isUserAdmin ? '💡 *Você não é administrador - alguns comandos não estã
 
 ---
 💡 ${config.donation.message}
-❤️ Use \`${config.prefix}pix\` para apoiar o bot!`
+❤️ Use \\`${config.prefix}pix\\` para apoiar o bot!`
                 
                 await sock.sendMessage(groupId, {
                     text: rulesWithFooter,
