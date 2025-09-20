@@ -29,6 +29,13 @@ app.use(express.static(path.join(__dirname, 'public')))
 const CONFIG_FILE = path.join(__dirname, '../web-config.json')
 const BOT_CONFIG_FILE = path.join(__dirname, '../config.json')
 
+// Configurações de doação
+const DONATION_CONFIG = {
+    pixKey: '7789f18e-3562-421e-b98b-688c7b402039',
+    message: 'Este bot roda 24h no meu celular via Termux. Manter ele online tem custos de energia e internet.',
+    enabled: true
+}
+
 // Estado do bot
 let botStatus = {
     connected: false,
@@ -418,7 +425,22 @@ app.get('/api/settings', (req, res) => {
     }
 })
 
-// 10. Obter estatísticas detalhadas da bateria
+// 10. Obter informações de doação
+app.get('/api/donation', (req, res) => {
+    try {
+        res.json({
+            success: true,
+            data: DONATION_CONFIG
+        })
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message
+        })
+    }
+})
+
+// 11. Obter estatísticas detalhadas da bateria
 app.get('/api/battery/stats', (req, res) => {
     try {
         const batteryStats = {

@@ -14,7 +14,11 @@ const config = {
     ownerNumber: '', // Número do dono do bot (formato: 5511999999999)
     admins: [], // Números dos admins (será carregado do config.json)
     prefix: '!',
-    autoWelcome: true
+    autoWelcome: true,
+    donation: {
+        pixKey: '7789f18e-3562-421e-b98b-688c7b402039',
+        message: '💡 Este bot roda 24h no meu celular via Termux. Manter ele online tem custos de energia e internet.'
+    }
 }
 
 // Estado do bot para o painel web
@@ -817,14 +821,21 @@ async function startBot() {
 *Geral:*
 • \`${config.prefix}help\` - Mostra esta mensagem
 • \`${config.prefix}regras\` - Exibe as regras do grupo
+• \`${config.prefix}pix\` - Informações para doação/suporte
+• \`${config.prefix}donate\` - Como apoiar o bot
 • \`${config.prefix}testowner\` - Testa se você é reconhecido como dono
 • \`${config.prefix}botadmin\` - Verifica se o bot é admin do grupo
 
 *Funcionalidades Automáticas:*
 ✅ Mensagem de boas-vindas para novos membros
 ✅ Sistema de moderação administrativo
+✅ Comandos personalizados dinâmicos
 
-${!isUserAdmin ? '💡 *Você não é administrador - alguns comandos não estão visíveis*' : '👨‍💼 *Você é administrador - comandos completos disponíveis*'}`
+${!isUserAdmin ? '💡 *Você não é administrador - alguns comandos não estão visíveis*' : '👨‍💼 *Você é administrador - comandos completos disponíveis*'}
+
+---
+💡 ${config.donation.message}
+❤️ Use \`${config.prefix}pix\` para apoiar o projeto!
 
                 await sock.sendMessage(groupId, {
                     text: helpText,
@@ -835,8 +846,57 @@ ${!isUserAdmin ? '💡 *Você não é administrador - alguns comandos não estã
             // Comando para exibir regras
             if (command === 'regras' || command === 'rules') {
                 console.log('📋 === PROCESSANDO COMANDO REGRAS ===')
+                const rulesWithFooter = `${WELCOME_MESSAGE}
+
+---
+💡 ${config.donation.message}
+❤️ Use \`${config.prefix}pix\` para apoiar o bot!`
+                
                 await sock.sendMessage(groupId, {
-                    text: WELCOME_MESSAGE,
+                    text: rulesWithFooter,
+                    quoted: message
+                })
+            }
+
+            // Comandos de doação (PIX)
+            if (command === 'pix' || command === 'donate' || command === 'doar') {
+                console.log('💰 === PROCESSANDO COMANDO PIX/DONATE ===')
+                
+                const donationMessage = `💰 *Apoie o Bot Moderador*
+
+🤖 **Por que doar?**
+${config.donation.message}
+
+💸 **Custos mensais:**
+• 🔋 Energia elétrica 24h
+• 📱 Internet móvel ilimitada
+• ⚡ Manutenção e atualizações
+• 🛡️ Segurança e backups
+
+📋 **Chave PIX:**
+\`${config.donation.pixKey}\`
+
+📱 **Como doar:**
+1. Copie a chave PIX acima
+2. Abra seu app bancário
+3. Escolha PIX → Enviar
+4. Cole a chave
+5. Digite o valor (qualquer quantia ajuda!)
+
+❤️ **Sua contribuição:**
+• Mantém o bot online 24h
+• Permite novas funcionalidades
+• Garante estabilidade
+• Mostra que você valoriza o serviço
+
+🙏 **Obrigado pelo apoio!**
+Cada doação, mesmo pequena, faz toda a diferença!
+
+---
+🎯 Comando: \`${config.prefix}pix\` ou \`${config.prefix}donate\``
+
+                await sock.sendMessage(groupId, {
+                    text: donationMessage,
                     quoted: message
                 })
             }
