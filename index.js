@@ -22,7 +22,8 @@ let botStats = {
     connected: false,
     totalMessages: 0,
     groups: [],
-    startTime: new Date()
+    startTime: new Date(),
+    connectionTime: null  // Quando o bot conectou de fato
 }
 
 // Configuração web (para integração com painel)
@@ -166,6 +167,39 @@ async function loadWebConfigHTTP() {
         console.log('⚠️ Não foi possível carregar configurações web via HTTP:', error.message)
     }
     return false
+}
+
+// Verificar se é seguro enviar mensagem de boas-vindas
+function isSafeToSendWelcome(sock, participants) {
+    // 1. Verificar se o bot conectou há pelo menos 2 minutos (evitar sincronização inicial)
+    if (!botStats.connectionTime) {
+        console.log('⚠️ Boas-vindas: Bot não tem registro de connectionTime, ignorando')
+        return false
+    }
+    
+    const timeSinceConnection = Date.now() - botStats.connectionTime.getTime()
+    const minTimeRequired = 2 * 60 * 1000 // 2 minutos em ms
+    
+    if (timeSinceConnection < minTimeRequired) {
+        console.log(`⚠️ Boas-vindas: Bot conectou há apenas ${Math.round(timeSinceConnection/1000)}s, aguardando estabilização (mín: ${minTimeRequired/1000}s)`)
+        return false
+    }
+    
+    // 2. Verificar se não é o próprio bot sendo adicionado
+    const botNumber = sock?.user?.id?.split(':')[0]
+    if (botNumber && participants.some(p => p.includes(botNumber))) {
+        console.log('⚠️ Boas-vindas: Próprio bot detectado nos participantes, ignorando')
+        return false
+    }
+    
+    // 3. Verificar se participantes não são vazios
+    if (!participants || participants.length === 0) {
+        console.log('⚠️ Boas-vindas: Lista de participantes vazia, ignorando')
+        return false
+    }
+    
+    console.log('✅ Boas-vindas: Seguro para enviar -', participants.length, 'novo(s) membro(s)')
+    return true
 }
 
 // Obter lista de grupos
@@ -422,6 +456,10 @@ async function startBot() {
             console.log('✅ Bot conectado ao WhatsApp!')
             console.log('🤖 Bot está ativo e monitorando mensagens...')
             
+            // Registrar momento da conexão
+            botStats.connectionTime = new Date()
+            console.log('⏰ Conexão estabelecida às:', botStats.connectionTime.toLocaleTimeString())
+            
             // Atualizar status web
             botStats.connected = true
             botStats.groups = await getGroupsList(sock)
@@ -435,23 +473,48 @@ async function startBot() {
 
     // Gerenciar atualizações de grupos (novos membros)
     sock.ev.on('group-participants.update', async (update) => {
-        if (!config.autoWelcome) return
+        if (!config.autoWelcome) {
+            console.log('📋 Boas-vindas desabilitadas na configuração')
+            return
+        }
 
-        const { id: groupId, participants, action } = update
+        const { id: groupId, participants, action, author } = update
+        
+        console.log('\n🔄 === EVENT: group-participants.update ===')
+        console.log('📍 Grupo:', groupId)
+        console.log('👥 Participantes afetados:', participants?.length || 0)
+        console.log('⚡ Ação:', action)
+        console.log('👤 Autor (quem fez a ação):', author || 'Sistema')
+        console.log('⏰ Timestamp:', new Date().toLocaleTimeString())
         
         if (action === 'add') {
-            // Aguardar um pouco antes de enviar a mensagem
+            console.log('➕ Ação de ADICIONAR detectada')
+            
+            // Verificar se é seguro enviar boas-vindas
+            if (!isSafeToSendWelcome(sock, participants)) {
+                console.log('❌ Não é seguro enviar boas-vindas agora, pulando...')
+                console.log('========================================\n')
+                return
+            }
+            
+            // Aguardar um pouco antes de enviar a mensagem (dar tempo para participante carregar)
+            console.log('✅ Enviando mensagem de boas-vindas em 3 segundos...')
             setTimeout(async () => {
                 try {
                     await sock.sendMessage(groupId, {
                         text: WELCOME_MESSAGE
                     })
-                    console.log('📨 Mensagem de boas-vindas enviada para o grupo:', groupId)
+                    console.log('📨✅ Mensagem de boas-vindas enviada com sucesso para o grupo:', groupId)
+                    console.log('👋 Novos membros:', participants.map(p => p.replace('@s.whatsapp.net', '')).join(', '))
                 } catch (error) {
-                    console.error('❌ Erro ao enviar mensagem de boas-vindas:', error)
+                    console.error('❌ Erro ao enviar mensagem de boas-vindas:', error.message)
                 }
-            }, 2000)
+            }, 3000)
+        } else {
+            console.log(`ℹ️ Ação '${action}' não requer boas-vindas`)
         }
+        
+        console.log('========================================\n')
     })
 
     // Gerenciar mensagens recebidas
