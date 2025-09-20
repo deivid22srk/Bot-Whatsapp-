@@ -161,6 +161,36 @@ app.get('/api/status', (req, res) => {
     })
 })
 
+// 1.1. Atualizar status do bot (via HTTP)
+app.put('/api/status', (req, res) => {
+    try {
+        const newStatus = req.body
+        
+        // Atualizar status do bot
+        botStatus = { 
+            ...botStatus, 
+            ...newStatus, 
+            lastUpdate: new Date() 
+        }
+        
+        // Broadcast para todos os clientes WebSocket
+        broadcast({ type: 'bot_status', data: botStatus })
+        
+        console.log(`🔄 Status do bot atualizado via HTTP: ${botStatus.connected ? 'Conectado' : 'Desconectado'} - ${botStatus.groups?.length || 0} grupos`)
+        
+        res.json({
+            success: true,
+            message: 'Status atualizado com sucesso',
+            data: botStatus
+        })
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message
+        })
+    }
+})
+
 // 2. Listar grupos
 app.get('/api/groups', (req, res) => {
     try {
