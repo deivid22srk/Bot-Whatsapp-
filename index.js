@@ -23,7 +23,8 @@ let botStats = {
     totalMessages: 0,
     groups: [],
     startTime: new Date(),
-    connectionTime: null  // Quando o bot conectou de fato
+    connectionTime: null,  // Quando o bot conectou de fato
+    lastWelcome: 0  // Rate limiting para boas-vindas
 }
 
 // Configuração web (para integração com painel)
@@ -136,24 +137,44 @@ async function updateWebStatusHTTP(sock) {
         botStats.lastUpdate = new Date()
         botStats.groups = await getGroupsList(sock)
         
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 5000) // 5s timeout
+        
         const response = await fetch('http://localhost:3000/api/status', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(botStats)
+            body: JSON.stringify(botStats),
+            signal: controller.signal
         })
+        
+        clearTimeout(timeoutId)
         
         if (response.ok) {
             console.log('🌐 Status sincronizado com painel web via HTTP')
+        } else {
+            console.log('⚠️ Erro HTTP ao sincronizar:', response.status)
         }
     } catch (error) {
-        console.log('⚠️ Não foi possível sincronizar com painel web:', error.message)
+        if (error.name === 'AbortError') {
+            console.log('⚠️ Timeout ao sincronizar com painel web')
+        } else {
+            console.log('⚠️ Não foi possível sincronizar com painel web:', error.message)
+        }
     }
 }
 
 // Carregar configurações via HTTP (quando rodando separadamente)  
 async function loadWebConfigHTTP() {
     try {
-        const response = await fetch('http://localhost:3000/api/settings')
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 3000) // 3s timeout
+        
+        const response = await fetch('http://localhost:3000/api/settings', {
+            signal: controller.signal
+        })
+        
+        clearTimeout(timeoutId)
+        
         if (response.ok) {
             const data = await response.json()
             if (data.success) {
@@ -164,16 +185,19 @@ async function loadWebConfigHTTP() {
             }
         }
     } catch (error) {
-        console.log('⚠️ Não foi possível carregar configurações web via HTTP:', error.message)
+        if (error.name === 'AbortError') {
+            console.log('⚠️ Timeout ao carregar configurações web')
+        } else {
+            console.log('⚠️ Não foi possível carregar configurações web via HTTP:', error.message)
+        }
     }
     return false
 }
 
 // Verificar se é seguro enviar mensagem de boas-vindas
-function isSafeToSendWelcome(sock, participants) {
+function isSafeToSendWelcome(sock, participants, groupId) {
     // 1. Verificar se o bot conectou há pelo menos 2 minutos (evitar sincronização inicial)
     if (!botStats.connectionTime) {
-        console.log('⚠️ Boas-vindas: Bot não tem registro de connectionTime, ignorando')
         return false
     }
     
@@ -181,24 +205,35 @@ function isSafeToSendWelcome(sock, participants) {
     const minTimeRequired = 2 * 60 * 1000 // 2 minutos em ms
     
     if (timeSinceConnection < minTimeRequired) {
-        console.log(`⚠️ Boas-vindas: Bot conectou há apenas ${Math.round(timeSinceConnection/1000)}s, aguardando estabilização (mín: ${minTimeRequired/1000}s)`)
         return false
     }
     
     // 2. Verificar se não é o próprio bot sendo adicionado
     const botNumber = sock?.user?.id?.split(':')[0]
     if (botNumber && participants.some(p => p.includes(botNumber))) {
-        console.log('⚠️ Boas-vindas: Próprio bot detectado nos participantes, ignorando')
         return false
     }
     
     // 3. Verificar se participantes não são vazios
     if (!participants || participants.length === 0) {
-        console.log('⚠️ Boas-vindas: Lista de participantes vazia, ignorando')
         return false
     }
     
-    console.log('✅ Boas-vindas: Seguro para enviar -', participants.length, 'novo(s) membro(s)')
+    // 4. Verificar se não é uma adição em massa suspicinha (mais de 5 pessoas)
+    if (participants.length > 5) {
+        console.log('⚠️ Boas-vindas: Adição em massa detectada, ignorando por segurança')
+        return false
+    }
+    
+    // 5. Rate limiting - não enviar boas-vindas muito frequentes
+    const lastWelcome = botStats.lastWelcome || 0
+    const minWelcomeInterval = 10 * 1000 // 10 segundos entre boas-vindas
+    
+    if (Date.now() - lastWelcome < minWelcomeInterval) {
+        console.log('⚠️ Boas-vindas: Rate limit ativo, aguardando')
+        return false
+    }
+    
     return true
 }
 
@@ -210,15 +245,16 @@ async function getGroupsList(sock) {
         const groups = await sock.groupFetchAllParticipating()
         return Object.values(groups).map(group => ({
             id: group.id,
-            subject: group.subject,
+            subject: group.subject || 'Sem nome',
             participants: group.participants?.length || 0,
             creation: group.creation || 0,
-            owner: group.owner,
-            desc: group.desc
+            owner: group.owner || null,
+            desc: group.desc || null
         }))
     } catch (error) {
         console.error('❌ Erro ao obter grupos:', error.message)
-        return []
+        // Retornar grupos em cache se disponível
+        return botStats.groups || []
     }
 }
 
@@ -303,23 +339,14 @@ function createExampleConfig() {
 // Verificar se o usuário é admin
 async function isAdmin(userNumber, sock = null, groupId = null) {
     const cleanNumber = userNumber.replace('@s.whatsapp.net', '').replace(':.*', '')
-    console.log('\n🔐 ======== VERIFICAÇÃO DE ADMIN ========')
-    console.log('🔍 Verificando admin:', cleanNumber)
-    console.log('📋 Admins configurados:', config.admins)
-    console.log('👑 Owner configurado:', config.ownerNumber)
     
     // 1. Verificar se é admin configurado ou owner configurado
     let isAdminUser = config.admins.includes(cleanNumber) || cleanNumber === config.ownerNumber
-    console.log('✅ É admin/owner configurado?', isAdminUser)
     
     // 2. Verificar se é o dono do número conectado ao bot
     if (sock && sock.user && sock.user.id) {
         const botOwnerNumber = sock.user.id.replace(':.*', '').replace('@s.whatsapp.net', '')
-        console.log('🤖 Número do bot conectado:', botOwnerNumber)
-        console.log('🎯 Comparando:', cleanNumber, '===', botOwnerNumber)
-        
         if (cleanNumber === botOwnerNumber) {
-            console.log('👑 ✅ USUÁRIO É O DONO DO NÚMERO CONECTADO AO BOT!')
             isAdminUser = true
         }
     }
@@ -327,81 +354,45 @@ async function isAdmin(userNumber, sock = null, groupId = null) {
     // 3. NOVO: Verificar se é admin do grupo atual
     if (!isAdminUser && sock && groupId && groupId.endsWith('@g.us')) {
         try {
-            console.log('👥 Verificando se é admin do grupo:', groupId)
             const groupMetadata = await sock.groupMetadata(groupId)
-            console.log('🏠 Nome do grupo:', groupMetadata.subject)
-            console.log('📄 Total de participantes:', groupMetadata.participants.length)
-            
-            // Encontrar participante - more robust matching
             const participant = groupMetadata.participants.find(p => {
                 const participantNumber = p.id.replace('@s.whatsapp.net', '')
-                console.log('🔍 Comparando participante:', participantNumber, 'com', cleanNumber)
                 return participantNumber === cleanNumber || 
                        p.id === userNumber || 
                        p.id === (cleanNumber + '@s.whatsapp.net')
             })
             
-            if (participant) {
-                console.log('👤 Participante encontrado:', participant.id)
-                console.log('🛡️ Status no grupo:', participant.admin || 'member')
-                
-                if (participant.admin === 'admin' || participant.admin === 'superadmin') {
-                    console.log('🏅 ✅ USUÁRIO É ADMINISTRADOR DO GRUPO!')
-                    isAdminUser = true
-                } else {
-                    console.log('❌ Usuário é apenas membro do grupo')
-                }
-            } else {
-                console.log('⚠️ Participante não encontrado no grupo')
+            if (participant && (participant.admin === 'admin' || participant.admin === 'superadmin')) {
+                isAdminUser = true
             }
         } catch (error) {
             console.error('❌ Erro ao verificar admins do grupo:', error.message)
         }
     }
     
-    console.log('🎯 RESULTADO FINAL - É admin?', isAdminUser)
-    console.log('========================================\n')
     return isAdminUser
 }
 
 // Extrair número mencionado na mensagem
 function getMentionedNumber(message) {
-    console.log('🔍 Analisando mensagem para menções...')
-    
-    // Verificar diferentes tipos de mensagem
     const extendedText = message.message?.extendedTextMessage
-    const conversation = message.message?.conversation
-    
     let mentionedJid = null
     
     // Tentar pegar da mensagem extendida
     if (extendedText?.contextInfo?.mentionedJid) {
         mentionedJid = extendedText.contextInfo.mentionedJid[0]
-        console.log('📍 Menção encontrada em extendedText:', mentionedJid)
     }
     
     // Se não encontrou, tentar pegar de participant (para mensagens quotadas)
     if (!mentionedJid && extendedText?.contextInfo?.participant) {
         mentionedJid = extendedText.contextInfo.participant
-        console.log('📍 Menção encontrada em participant:', mentionedJid)
     }
-    
-    // Log da estrutura completa para debug
-    console.log('📨 Estrutura da mensagem:', JSON.stringify({
-        hasExtendedText: !!extendedText,
-        hasContextInfo: !!extendedText?.contextInfo,
-        mentionedJid: extendedText?.contextInfo?.mentionedJid,
-        participant: extendedText?.contextInfo?.participant,
-        quotedMessage: !!extendedText?.contextInfo?.quotedMessage
-    }, null, 2))
     
     if (mentionedJid) {
         const cleanNumber = mentionedJid.replace('@s.whatsapp.net', '')
-        console.log('✅ Número mencionado extraído:', cleanNumber)
         return cleanNumber
     }
     
-    console.log('❌ Nenhuma menção encontrada')
     return null
 }
 
@@ -411,19 +402,13 @@ async function startBot() {
     loadConfig()
     await loadWebConfig()  // Agora é async
     
-    // Aguardar um pouco para sincronização
-    setTimeout(async () => {
-        console.log('🔄 Sincronizando dados iniciais...')
-        if (sock?.user?.id) {
-            await updateWebStatusHTTP(sock)
-        }
-    }, 3000)
+    let sock = null // Declare sock variable
 
     // Estado de autenticação
     const { state, saveCreds } = await useMultiFileAuthState('./auth_info')
     
     // Criar socket do WhatsApp
-    const sock = makeWASocket({
+    sock = makeWASocket({
         auth: state,
         printQRInTerminal: true,
         logger: pino({ level: 'silent' }),
@@ -465,6 +450,14 @@ async function startBot() {
             botStats.groups = await getGroupsList(sock)
             updateWebStatus(sock)
             
+            // Aguardar um pouco para sincronização
+            setTimeout(async () => {
+                console.log('🔄 Sincronizando dados iniciais...')
+                if (sock?.user?.id) {
+                    await updateWebStatusHTTP(sock)
+                }
+            }, 3000)
+            
             if (webServer) {
                 console.log('🌐 Painel web integrado - Status sincronizado')
             }
@@ -491,7 +484,7 @@ async function startBot() {
             console.log('➕ Ação de ADICIONAR detectada')
             
             // Verificar se é seguro enviar boas-vindas
-            if (!isSafeToSendWelcome(sock, participants)) {
+            if (!isSafeToSendWelcome(sock, participants, groupId)) {
                 console.log('❌ Não é seguro enviar boas-vindas agora, pulando...')
                 console.log('========================================\n')
                 return
@@ -504,10 +497,15 @@ async function startBot() {
                     await sock.sendMessage(groupId, {
                         text: WELCOME_MESSAGE
                     })
+                    
+                    // Atualizar timestamp da última boas-vindas
+                    botStats.lastWelcome = Date.now()
+                    
                     console.log('📨✅ Mensagem de boas-vindas enviada com sucesso para o grupo:', groupId)
                     console.log('👋 Novos membros:', participants.map(p => p.replace('@s.whatsapp.net', '')).join(', '))
                 } catch (error) {
                     console.error('❌ Erro ao enviar mensagem de boas-vindas:', error.message)
+                    // Se der erro, não atualizar o timestamp para poder tentar novamente
                 }
             }, 3000)
         } else {
@@ -543,15 +541,10 @@ async function startBot() {
             : (message.key.participant || message.key.remoteJid)
         const groupId = message.key.remoteJid
 
-        console.log('\n================ MENSAGEM RECEBIDA ==================')
-        console.log('📝 Texto:', messageText)
-        console.log('👥 É grupo?', isGroup)
-        console.log('🤖 É mensagem própria?', message.key.fromMe)
-        console.log('📱 Remetente:', senderNumber)
-        console.log('🏠 ID do grupo:', groupId)
-        console.log('🏷️ Começa com prefixo?', messageText.startsWith(config.prefix))
-        console.log('🔑 Prefixo configurado:', config.prefix)
-        console.log('==========================================')
+        // Log simplificado - apenas para comandos
+        if (messageText.startsWith(config.prefix)) {
+            console.log(`📨 Comando recebido: ${messageText} - Grupo: ${isGroup} - Remetente: ${senderNumber.replace('@s.whatsapp.net', '')}`)
+        }
 
         // Contar mensagem processada
         botStats.totalMessages++
@@ -889,21 +882,7 @@ ${JSON.stringify(message.message, null, 2)}
                 })
             }
         } else {
-            // Mensagem que não é comando ou não é em grupo
-            console.log('🚫 === MENSAGEM NÃO PROCESSADA ===')
-            console.log('   - É grupo?', isGroup)
-            console.log('   - Começa com prefixo?', messageText.startsWith(config.prefix))
-            console.log('   - Texto completo:', messageText.substring(0, 100))
-            console.log('   - Remetente:', senderNumber)
-            console.log('   - Group ID:', groupId)
-            console.log('   - Prefixo configurado:', config.prefix)
-            
-            if (!isGroup) {
-                console.log('   ❌ MOTIVO: Mensagem não é de grupo (apenas comandos em grupos são processados)')
-            } else if (!messageText.startsWith(config.prefix)) {
-                console.log('   ❌ MOTIVO: Mensagem não começa com prefixo')
-            }
-            console.log('=====================================')
+            // Mensagem não é comando - log mínimo
         }
         
         // Atualizar status web após processar mensagem
