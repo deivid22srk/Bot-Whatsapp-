@@ -73,6 +73,7 @@
                 <button class="tab-button active" data-tab="grupos">📱 Gerenciar Grupos</button>
                 <button class="tab-button" data-tab="comandos">⚡ Comandos Customizados</button>
                 <button class="tab-button" data-tab="bateria">🔋 Estatísticas da Bateria</button>
+                <button class="tab-button" data-tab="doacao">💝 Apoiar o Bot</button>
                 <button class="tab-button" data-tab="configuracoes">⚙️ Configurações</button>
             </nav>
 
@@ -188,6 +189,101 @@
                                         <div class="stat-label">Temp. Máxima</div>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Doação Tab -->
+                <div class="tab-panel" id="doacao">
+                    <div class="panel-header">
+                        <h2>💝 Apoiar o Bot Moderador</h2>
+                        <p>Ajude a manter o bot funcionando 24h por dia</p>
+                    </div>
+                    
+                    <div class="donation-container">
+                        <!-- Card Principal de Doação -->
+                        <div class="donation-main-card">
+                            <div class="donation-icon">🤖💙</div>
+                            <h3>Por que seu apoio é importante?</h3>
+                            <p class="donation-description">
+                                Este bot roda 24h no meu celular via Termux. Manter ele online tem custos de energia e internet.
+                            </p>
+                            
+                            <div class="donation-costs">
+                                <h4>💸 Custos mensais:</h4>
+                                <ul>
+                                    <li>🔋 Energia elétrica 24h</li>
+                                    <li>📱 Internet móvel ilimitada</li>
+                                    <li>⚡ Manutenção e atualizações</li>
+                                    <li>🛡️ Segurança e backups</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Card do PIX -->
+                        <div class="donation-pix-card">
+                            <div class="pix-header">
+                                <h3>📱 Doar via PIX</h3>
+                                <p>Qualquer quantia ajuda a manter o bot funcionando!</p>
+                            </div>
+                            
+                            <div class="pix-key-section">
+                                <label for="pixKey">🔑 Chave PIX:</label>
+                                <div class="pix-input-group">
+                                    <input type="text" id="pixKey" value="7789f18e-3562-421e-b98b-688c7b402039" readonly>
+                                    <button class="btn-copy" onclick="copyPixKey()">
+                                        <span class="btn-icon">📋</span>
+                                        Copiar
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="pix-instructions">
+                                <h4>📝 Como doar:</h4>
+                                <ol>
+                                    <li>Clique em "Copiar" acima</li>
+                                    <li>Abra seu app bancário</li>
+                                    <li>Escolha PIX → Enviar</li>
+                                    <li>Cole a chave copiada</li>
+                                    <li>Digite qualquer valor</li>
+                                    <li>Confirme o pagamento</li>
+                                </ol>
+                            </div>
+                        </div>
+
+                        <!-- Card de Impacto -->
+                        <div class="donation-impact-card">
+                            <h3>❤️ Seu impacto</h3>
+                            <div class="impact-grid">
+                                <div class="impact-item">
+                                    <div class="impact-icon">🌟</div>
+                                    <div class="impact-text">Mantém o bot online 24h</div>
+                                </div>
+                                <div class="impact-item">
+                                    <div class="impact-icon">🚀</div>
+                                    <div class="impact-text">Permite novas funcionalidades</div>
+                                </div>
+                                <div class="impact-item">
+                                    <div class="impact-icon">🔒</div>
+                                    <div class="impact-text">Garante estabilidade</div>
+                                </div>
+                                <div class="impact-item">
+                                    <div class="impact-icon">💯</div>
+                                    <div class="impact-text">Mostra que você valoriza</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Card de Agradecimento -->
+                        <div class="donation-thanks-card">
+                            <div class="thanks-icon">🙏</div>
+                            <h3>Obrigado pelo apoio!</h3>
+                            <p>Cada doação, mesmo pequena, faz toda a diferença para manter este projeto vivo e ativo.</p>
+                            
+                            <div class="bot-commands-reminder">
+                                <h4>🎯 Comandos no WhatsApp:</h4>
+                                <code>!pix</code> ou <code>!donate</code> - Mostra estas informações
                             </div>
                         </div>
                     </div>

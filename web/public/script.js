@@ -761,3 +761,114 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 })
+
+// ========================================
+// Função para Copiar Chave PIX
+// ========================================
+
+function copyPixKey() {
+    const pixKeyInput = document.getElementById('pixKey')
+    const copyButton = document.querySelector('.btn-copy')
+    
+    if (!pixKeyInput) {
+        console.error('Campo da chave PIX não encontrado')
+        return
+    }
+    
+    try {
+        // Selecionar o texto
+        pixKeyInput.select()
+        pixKeyInput.setSelectionRange(0, 99999) // Para dispositivos móveis
+        
+        // Copiar para área de transferência
+        const successful = document.execCommand('copy')
+        
+        if (successful) {
+            // Feedback visual de sucesso
+            const originalText = copyButton.innerHTML
+            copyButton.innerHTML = '<span class="btn-icon">✅</span>Copiado!'
+            copyButton.style.background = 'linear-gradient(135deg, #28a745, #20c997)'
+            
+            // Deselecionar o texto
+            pixKeyInput.blur()
+            
+            // Mostrar toast de sucesso
+            showToast('✅ Chave PIX copiada com sucesso!', 'success')
+            
+            // Restaurar botão após 2 segundos
+            setTimeout(() => {
+                copyButton.innerHTML = originalText
+                copyButton.style.background = 'linear-gradient(135deg, #28a745, #20c997)'
+            }, 2000)
+        } else {
+            throw new Error('Comando de cópia não suportado')
+        }
+    } catch (err) {
+        console.error('Erro ao copiar:', err)
+        
+        // Fallback: usar Clipboard API moderna se disponível
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(pixKeyInput.value).then(() => {
+                showToast('✅ Chave PIX copiada com sucesso!', 'success')
+                
+                // Feedback visual
+                const originalText = copyButton.innerHTML
+                copyButton.innerHTML = '<span class="btn-icon">✅</span>Copiado!'
+                
+                setTimeout(() => {
+                    copyButton.innerHTML = originalText
+                }, 2000)
+            }).catch(() => {
+                showToast('❌ Erro ao copiar. Tente selecionar e copiar manualmente.', 'error')
+            })
+        } else {
+            // Última tentativa: selecionar o texto para o usuário copiar manualmente
+            pixKeyInput.select()
+            showToast('⚠️ Selecione o texto e pressione Ctrl+C para copiar', 'warning')
+        }
+    }
+}
+
+// Função auxiliar para mostrar toast (se não existir, implementar básica)
+function showToast(message, type = 'info') {
+    // Verificar se função showToast já existe
+    if (window.showToastOriginal) {
+        window.showToastOriginal(message, type)
+        return
+    }
+    
+    // Implementação básica de toast
+    const toast = document.createElement('div')
+    toast.className = `toast toast-${type}`
+    toast.textContent = message
+    
+    // Estilos inline básicos
+    Object.assign(toast.style, {
+        position: 'fixed',
+        top: '20px',
+        right: '20px',
+        background: type === 'success' ? '#28a745' : type === 'error' ? '#dc3545' : '#ffc107',
+        color: 'white',
+        padding: '12px 20px',
+        borderRadius: '8px',
+        zIndex: '9999',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+        fontSize: '14px',
+        fontWeight: '500',
+        maxWidth: '300px',
+        wordWrap: 'break-word'
+    })
+    
+    document.body.appendChild(toast)
+    
+    // Remover toast após 4 segundos
+    setTimeout(() => {
+        toast.style.opacity = '0'
+        toast.style.transform = 'translateX(100%)'
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.parentNode.removeChild(toast)
+            }
+        }, 300)
+    }, 4000)
+}
