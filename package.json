@@ -8,7 +8,7 @@
     "start": "node index.js",
     "dev": "node --watch index.js",
     "web": "node web/server.js",
-    "bot": "node index.js",
+    "bot": "EXTERNAL_WEB_SERVER=true node index.js",
     "panel": "node web/server.js",
     "both": "concurrently \"npm run bot\" \"npm run web\""
   },
