@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🤖 Bot WhatsApp - Painel de Controle</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <span class="logo-icon">🤖</span>
+                    <span class="logo-text">Bot WhatsApp</span>
+                </div>
+                <div class="status-indicator">
+                    <div class="status-dot" id="statusDot"></div>
+                    <span class="status-text" id="statusText">Desconectado</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+        <div class="container">
+            
+            <!-- Dashboard Overview -->
+            <section class="overview">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">👥</div>
+                        <div class="stat-content">
+                            <div class="stat-value" id="totalGroups">0</div>
+                            <div class="stat-label">Grupos Totais</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">✅</div>
+                        <div class="stat-content">
+                            <div class="stat-value" id="activeGroups">0</div>
+                            <div class="stat-label">Grupos Ativos</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">💬</div>
+                        <div class="stat-content">
+                            <div class="stat-value" id="totalMessages">0</div>
+                            <div class="stat-label">Mensagens Processadas</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">⚡</div>
+                        <div class="stat-content">
+                            <div class="stat-value" id="customCommands">0</div>
+                            <div class="stat-label">Comandos Customizados</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Navigation Tabs -->
+            <nav class="tabs">
+                <button class="tab-button active" data-tab="grupos">📱 Gerenciar Grupos</button>
+                <button class="tab-button" data-tab="comandos">⚡ Comandos Customizados</button>
+                <button class="tab-button" data-tab="configuracoes">⚙️ Configurações</button>
+            </nav>
+
+            <!-- Tab Content -->
+            <div class="tab-content">
+                
+                <!-- Grupos Tab -->
+                <div class="tab-panel active" id="grupos">
+                    <div class="panel-header">
+                        <h2>📱 Gerenciamento de Grupos</h2>
+                        <p>Ative ou desative o bot em grupos específicos</p>
+                    </div>
+                    
+                    <div class="groups-container">
+                        <div class="groups-list" id="groupsList">
+                            <div class="loading">Carregando grupos...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Comandos Tab -->
+                <div class="tab-panel" id="comandos">
+                    <div class="panel-header">
+                        <h2>⚡ Comandos Customizados</h2>
+                        <p>Adicione comandos personalizados para o bot</p>
+                        <button class="btn-primary" id="addCommandBtn">
+                            <span class="btn-icon">➕</span>
+                            Adicionar Comando
+                        </button>
+                    </div>
+                    
+                    <div class="commands-container">
+                        <div class="commands-list" id="commandsList">
+                            <div class="loading">Carregando comandos...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Configurações Tab -->
+                <div class="tab-panel" id="configuracoes">
+                    <div class="panel-header">
+                        <h2>⚙️ Configurações Gerais</h2>
+                        <p>Configure o comportamento do bot</p>
+                    </div>
+                    
+                    <div class="settings-container">
+                        <form id="settingsForm" class="settings-form">
+                            <div class="setting-group">
+                                <label class="setting-label">
+                                    <input type="checkbox" id="autoWelcome" name="autoWelcome">
+                                    <span class="setting-title">🎉 Mensagem de Boas-vindas Automática</span>
+                                    <span class="setting-description">Enviar regras automaticamente para novos membros</span>
+                                </label>
+                            </div>
+                            
+                            <div class="setting-group">
+                                <label class="setting-label">
+                                    <input type="checkbox" id="antiSpam" name="antiSpam">
+                                    <span class="setting-title">🛡️ Proteção Anti-Spam</span>
+                                    <span class="setting-description">Detectar e punir automaticamente spam</span>
+                                </label>
+                            </div>
+                            
+                            <div class="setting-group">
+                                <label class="setting-label">
+                                    <input type="checkbox" id="logActions" name="logActions">
+                                    <span class="setting-title">📝 Log de Ações</span>
+                                    <span class="setting-description">Registrar todas as ações administrativas</span>
+                                </label>
+                            </div>
+                            
+                            <button type="submit" class="btn-primary">
+                                <span class="btn-icon">💾</span>
+                                Salvar Configurações
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal para Adicionar/Editar Comando -->
+    <div class="modal" id="commandModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">➕ Adicionar Comando</h3>
+                <button class="modal-close" id="modalClose">&times;</button>
+            </div>
+            
+            <form id="commandForm" class="modal-body">
+                <div class="form-group">
+                    <label for="commandName">Nome do Comando:</label>
+                    <input type="text" id="commandName" placeholder="Ex: bemvindo" required>
+                    <small class="form-help">Sem espaços ou caracteres especiais. Use apenas letras e números.</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="commandResponse">Resposta do Comando:</label>
+                    <textarea id="commandResponse" placeholder="Digite a resposta que o bot enviará..." required></textarea>
+                    <small class="form-help">Use {user} para mencionar quem usou o comando.</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="commandDescription">Descrição (Opcional):</label>
+                    <input type="text" id="commandDescription" placeholder="Descrição do comando...">
+                </div>
+                
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="commandAdminOnly">
+                        <span class="checkmark"></span>
+                        Apenas Administradores
+                    </label>
+                    <small class="form-help">Se marcado, apenas admins do grupo podem usar este comando.</small>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" id="cancelBtn">Cancelar</button>
+                    <button type="submit" class="btn-primary">
+                        <span class="btn-icon">💾</span>
+                        <span id="submitBtnText">Adicionar</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Scripts -->
+    <script src="script.js"></script>
+</body>
+</html>

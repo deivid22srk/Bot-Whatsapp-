@@ -1,0 +1,28 @@
+{
+  "activeGroups": {},
+  "customCommands": [
+    {
+      "id": "1",
+      "command": "oi",
+      "response": "Olá {user}! 👋 Como posso ajudar?",
+      "adminOnly": false,
+      "description": "Cumprimento amigável",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "usage": 0
+    },
+    {
+      "id": "2",
+      "command": "regrasrápidas",
+      "response": "📋 Principais regras:\n✅ Respeito sempre\n❌ Sem spam\n❌ Sem conteúdo impróprio\n⚠️ Infração = banimento",
+      "adminOnly": false,
+      "description": "Versão resumida das regras",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "usage": 0
+    }
+  ],
+  "settings": {
+    "autoWelcome": true,
+    "antiSpam": false,
+    "logActions": true
+  }
+}

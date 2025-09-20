@@ -9,6 +9,9 @@ Bot completo para WhatsApp com funcionalidades de moderação e gerenciamento de
 - 📜 **Mensagens Automáticas**: Envia regras para novos membros
 - 👨‍💼 **Sistema de Admins**: Controle de permissões por número
 - 📱 **Compatível com Termux**: Funciona perfeitamente no Android
+- 🌐 **Painel Web**: Interface moderna para gerenciar o bot remotamente
+- ⚡ **Comandos Customizados**: Adicione comandos personalizados via web
+- 🎛️ **Controle de Grupos**: Ative/desative o bot em grupos específicos
 
 ## 👨‍💼 Sistema de Administradores
 
@@ -53,6 +56,7 @@ O bot reconhece administradores de **4 formas diferentes**:
 - `!regras` - Exibe as regras do grupo
 - `!testowner` - Testa se é reconhecido como dono do bot
 - `!botadmin` - Verifica se o bot é administrador do grupo
+- **🆕 Comandos customizados** - Criados via painel web
 
 ## 🚀 Instalação no Termux
 
@@ -141,7 +145,17 @@ nano config.json
 npm start
 ```
 
-### 8. Conectar ao WhatsApp
+### 8. **🆕 Iniciar o Painel Web (Opcional)**
+```bash
+# Em outro terminal
+npm run web
+```
+
+**Painel estará disponível em:**
+- 📱 **Localhost**: http://localhost:3000
+- 🌐 **Rede local**: http://192.168.x.x:3000 (acesse de qualquer dispositivo)
+
+### 9. Conectar ao WhatsApp
 1. Um QR Code aparecerá no terminal
 2. Abra o WhatsApp no seu celular
 3. Vá em **Configurações** → **Aparelhos conectados** → **Conectar um aparelho**
@@ -198,6 +212,122 @@ APKs puros são restritos a administradores, garantindo a segurança.
 
 ⚠️ Quebrar regras = banimento ⚠️
 ```
+
+## 🌐 Painel Web de Controle
+
+### 🎯 **Nova Funcionalidade Revolucionária**
+
+O bot agora inclui um painel web moderno para gerenciamento remoto!
+
+### ✨ **Funcionalidades do Painel:**
+
+#### 📱 **Gerenciamento de Grupos**
+- ✅ **Visualizar todos os grupos** onde o bot está
+- 🎛️ **Ativar/Desativar** o bot em grupos específicos
+- 📊 **Estatísticas** de participantes e atividade
+- 🔄 **Atualizações em tempo real**
+
+#### ⚡ **Comandos Customizados**
+- ➕ **Adicionar comandos personalizados** via interface web
+- ✏️ **Editar comandos** existentes facilmente  
+- 🗑️ **Deletar comandos** que não usa mais
+- 👨‍💼 **Configurar permissões** (admin only ou público)
+- 📊 **Acompanhar uso** de cada comando
+
+#### ⚙️ **Configurações Avançadas**
+- 🎉 **Mensagem de boas-vindas** automática
+- 🛡️ **Proteção anti-spam** (em desenvolvimento)
+- 📝 **Log de ações** administrativas
+- 🔄 **Sincronização em tempo real**
+
+### 🚀 **Como Usar o Painel:**
+
+#### 1. **🎯 Iniciar Bot + Painel (Recomendado):**
+```bash
+# Inicia bot e painel web simultaneamente
+./start-all.sh
+```
+
+#### 2. **Iniciar Separadamente:**
+```bash
+# Terminal 1: Bot WhatsApp
+npm start
+
+# Terminal 2: Painel Web  
+npm run web
+```
+
+#### 3. **Usando NPM:**
+```bash
+# Inicia ambos (precisa do concurrently instalado)
+npm run both
+```
+
+#### 2. **Acessar de Qualquer Dispositivo:**
+- **PC/Laptop**: http://localhost:3000
+- **Celular/Tablet**: http://192.168.x.x:3000
+- **Outro PC na rede**: http://IP-DO-TERMUX:3000
+
+> 💡 **Dica**: O painel funciona em qualquer dispositivo na mesma rede WiFi!
+
+#### 3. **Gerenciar Grupos:**
+1. Abrir aba "📱 Gerenciar Grupos"
+2. Ver lista de todos os grupos
+3. Usar interruptor para ativar/desativar bot
+4. Grupos desativados = bot ignora mensagens
+
+#### 4. **Adicionar Comandos Customizados:**
+1. Abrir aba "⚡ Comandos Customizados"  
+2. Clicar "➕ Adicionar Comando"
+3. Preencher:
+   - **Nome**: nome do comando (ex: `bemvindo`)
+   - **Resposta**: o que o bot vai responder
+   - **Descrição**: opcional, para organização
+   - **Só Admins**: marcar se apenas admins podem usar
+4. Salvar e pronto!
+
+#### 5. **Exemplo de Comando Customizado:**
+```
+Nome: bemvindo
+Resposta: Seja bem-vindo(a) {user}! 🎉 
+Esperamos que se divirta no grupo!
+Só Admins: ❌ (todos podem usar)
+```
+
+**Uso no WhatsApp:**
+```
+!bemvindo
+```
+**Resultado:**
+```
+Seja bem-vindo(a) @SeuNome! 🎉
+Esperamos que se divirta no grupo!
+```
+
+### 📊 **Dashboard em Tempo Real:**
+
+O painel mostra:
+- 🟢/🔴 **Status de conexão** do bot
+- 📈 **Número de grupos totais**  
+- ✅ **Grupos ativos**
+- 💬 **Mensagens processadas**
+- ⚡ **Comandos customizados**
+
+### 📱 **Responsivo e Moderno:**
+
+- ✅ **Funciona em celular, tablet e desktop**
+- 🎨 **Interface moderna e intuitiva** 
+- ⚡ **Atualizações instantâneas** via WebSocket
+- 🌙 **Design profissional** com gradientes
+
+### 🔒 **Segurança:**
+
+- 🏠 **Apenas rede local** (não exposto na internet)
+- 🔐 **Integração segura** com o bot
+- 💾 **Configurações salvas** automaticamente
+- 🔄 **Backup automático** das configurações
+
+---
 
 ## 🔧 Comandos Úteis do Termux
 
