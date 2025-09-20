@@ -229,6 +229,12 @@ function isGroupActive(groupId) {
         return true // Padrão: todos ativos
     }
     
+    // Verificar se activeGroups existe antes de acessar
+    if (!webConfig.activeGroups) {
+        console.log('🌐 ActiveGroups não configurado, grupo ativo por padrão:', groupId)
+        return true
+    }
+    
     const isActive = webConfig.activeGroups[groupId] !== false
     console.log('🌐 Status do grupo', groupId, ':', isActive ? 'ATIVO' : 'INATIVO')
     return isActive
@@ -302,7 +308,7 @@ function createExampleConfig() {
 
 // Verificar se o usuário é admin
 async function isAdmin(userNumber, sock = null, groupId = null) {
-    const cleanNumber = userNumber.replace('@s.whatsapp.net', '').replace(':.*', '')
+    const cleanNumber = userNumber.replace('@s.whatsapp.net', '').replace(/:.*/, '')
     console.log('\n🔐 ======== VERIFICAÇÃO DE ADMIN ========')
     console.log('🔍 Verificando admin:', cleanNumber)
     console.log('📋 Admins configurados:', config.admins)
@@ -314,7 +320,7 @@ async function isAdmin(userNumber, sock = null, groupId = null) {
     
     // 2. Verificar se é o dono do número conectado ao bot
     if (sock && sock.user && sock.user.id) {
-        const botOwnerNumber = sock.user.id.replace(':.*', '').replace('@s.whatsapp.net', '')
+        const botOwnerNumber = sock.user.id.replace(/:.*/, '').replace('@s.whatsapp.net', '')
         console.log('🤖 Número do bot conectado:', botOwnerNumber)
         console.log('🎯 Comparando:', cleanNumber, '===', botOwnerNumber)
         
@@ -407,25 +413,18 @@ function getMentionedNumber(message) {
 
 // Função principal do bot
 async function startBot() {
+    // Declarar variável sock
+    let sock = null
+    
     // Carregar configurações
     loadConfig()
     await loadWebConfig()  // Agora é async
-    
-    // Aguardar um pouco para sincronização
-    setTimeout(async () => {
-        console.log('🔄 Sincronizando dados iniciais...')
-        if (sock?.user?.id) {
-            await updateWebStatusHTTP(sock)
-        }
-    }, 3000)
-
     // Estado de autenticação
     const { state, saveCreds } = await useMultiFileAuthState('./auth_info')
     
     // Criar socket do WhatsApp
-    const sock = makeWASocket({
+    sock = makeWASocket({
         auth: state,
-        printQRInTerminal: true,
         logger: pino({ level: 'silent' }),
         browser: ['Bot Moderador', 'Desktop', '1.0.0']
     })
@@ -438,7 +437,7 @@ async function startBot() {
         const { connection, lastDisconnect, qr } = update
         
         if (qr) {
-            console.log('📱 Escaneie o QR Code acima com seu WhatsApp!')
+            console.log('📱 Escaneie o QR Code abaixo com seu WhatsApp!')
             qrcode.generate(qr, { small: true })
         }
         
@@ -539,7 +538,7 @@ async function startBot() {
         }
         const isGroup = message.key.remoteJid?.endsWith('@g.us')
         const senderNumber = message.key.fromMe 
-            ? sock.user.id.replace(':.*', '')
+            ? sock.user.id.replace(/:.*/, '') + '@s.whatsapp.net'
             : (message.key.participant || message.key.remoteJid)
         const groupId = message.key.remoteJid
 
