@@ -166,27 +166,63 @@ async function updateWebStatusHTTP(sock) {
 // Carregar configurações via HTTP (quando rodando separadamente)  
 async function loadWebConfigHTTP() {
     try {
-        const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 3000) // 3s timeout
+        console.log('🔄 Carregando configurações completas do painel web...')
         
-        const response = await fetch('http://localhost:3000/api/settings', {
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 5000) // 5s timeout
+        
+        // Carregar settings
+        const settingsResponse = await fetch('http://localhost:3000/api/settings', {
+            signal: controller.signal
+        })
+        
+        // Carregar comandos customizados
+        const commandsResponse = await fetch('http://localhost:3000/api/commands', {
+            signal: controller.signal
+        })
+        
+        // Carregar grupos ativos
+        const groupsResponse = await fetch('http://localhost:3000/api/groups', {
             signal: controller.signal
         })
         
         clearTimeout(timeoutId)
         
-        if (response.ok) {
-            const data = await response.json()
-            if (data.success) {
-                webConfig = { settings: data.data }
+        if (settingsResponse.ok && commandsResponse.ok && groupsResponse.ok) {
+            const settingsData = await settingsResponse.json()
+            const commandsData = await commandsResponse.json()
+            const groupsData = await groupsResponse.json()
+            
+            if (settingsData.success && commandsData.success && groupsData.success) {
+                webConfig = {
+                    settings: settingsData.data,
+                    customCommands: commandsData.data || [],
+                    activeGroups: groupsData.data.activeGroups || {}
+                }
+                
                 config.autoWelcome = webConfig.settings.autoWelcome !== false
+                
                 console.log('🌐 Configurações web carregadas via HTTP')
+                console.log(`⚙️ Settings: ${Object.keys(webConfig.settings).length} configurações carregadas`)
+                console.log(`📝 Comandos customizados: ${webConfig.customCommands.length} comandos carregados`)
+                console.log(`👥 Grupos configurados: ${Object.keys(webConfig.activeGroups).length} grupos`)
+                
+                // Log dos comandos para debug
+                if (webConfig.customCommands.length > 0) {
+                    console.log('🎯 Comandos disponíveis:')
+                    webConfig.customCommands.forEach(cmd => {
+                        console.log(`   - !${cmd.command} (${cmd.adminOnly ? 'admin' : 'público'}): ${cmd.response?.substring(0, 40)}...`)
+                    })
+                } else {
+                    console.log('⚠️ Nenhum comando customizado configurado no painel web')
+                }
+                
                 return true
             }
         }
     } catch (error) {
         if (error.name === 'AbortError') {
-            console.log('⚠️ Timeout ao carregar configurações web')
+            console.log('⚠️ Timeout ao carregar configurações web (5s)')
         } else {
             console.log('⚠️ Não foi possível carregar configurações web via HTTP:', error.message)
         }
@@ -278,17 +314,34 @@ function isGroupActive(groupId) {
 
 // Obter comandos customizados
 function getCustomCommands() {
-    if (!webConfig) return []
+    if (!webConfig) {
+        console.log('⚠️ [CUSTOM CMD] webConfig não disponível')
+        return []
+    }
     
-    return webConfig.customCommands || []
+    const commands = webConfig.customCommands || []
+    console.log(`📝 [CUSTOM CMD] ${commands.length} comandos customizados disponíveis em webConfig`)
+    
+    return commands
 }
 
 // Processar comando customizado
 async function processCustomCommand(command, message, sock, senderNumber, groupId, isUserAdmin) {
     const customCommands = getCustomCommands()
+    
+    console.log(`🔍 [CUSTOM CMD] Procurando comando '${command}' entre ${customCommands.length} comandos`)
+    if (customCommands.length > 0) {
+        console.log(`📝 [CUSTOM CMD] Comandos disponíveis: ${customCommands.map(c => c.command).join(', ')}`)
+    }
+    
     const customCommand = customCommands.find(c => c.command === command)
     
-    if (!customCommand) return false
+    if (!customCommand) {
+        console.log(`❌ [CUSTOM CMD] Comando '${command}' não encontrado`)
+        return false
+    }
+    
+    console.log(`✅ [CUSTOM CMD] Comando '${command}' encontrado! AdminOnly: ${customCommand.adminOnly}, IsUserAdmin: ${isUserAdmin}`)
     
     // Verificar permissões
     if (customCommand.adminOnly && !isUserAdmin) {
