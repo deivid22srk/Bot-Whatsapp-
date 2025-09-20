@@ -1,9 +1,20 @@
-const express = require('express')
-const cors = require('cors')
-const bodyParser = require('body-parser')
-const fs = require('fs')
-const path = require('path')
-const WebSocket = require('ws')
+import express from 'express'
+import cors from 'cors'
+import bodyParser from 'body-parser'
+import fs from 'fs'
+import path from 'path'
+import { WebSocketServer, WebSocket } from 'ws'
+import { fileURLToPath } from 'url'
+import { dirname } from 'path'
+import { exec } from 'child_process'
+import { promisify } from 'util'
+
+// Para substituir __dirname em ES modules
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
+
+// Promisificar exec para usar com async/await
+const execAsync = promisify(exec)
 
 // Configurações
 const app = express()
@@ -24,11 +35,17 @@ let botStatus = {
     groups: [],
     lastUpdate: new Date(),
     totalMessages: 0,
-    activeGroups: 0
+    activeGroups: 0,
+    battery: {
+        level: null,
+        status: 'unknown',
+        isCharging: false,
+        temperature: null
+    }
 }
 
 // WebSocket Server para comunicação em tempo real
-const wss = new WebSocket.Server({ port: 3001 })
+const wss = new WebSocketServer({ port: 3001 })
 
 // Função para carregar configuração web
 function loadWebConfig() {
@@ -64,6 +81,33 @@ function saveWebConfig(config) {
     } catch (error) {
         console.error('Erro ao salvar configuração web:', error)
         return false
+    }
+}
+
+// Função para obter informações da bateria (Termux)
+async function getBatteryInfo() {
+    try {
+        const { stdout } = await execAsync('termux-battery-status')
+        const batteryData = JSON.parse(stdout)
+        
+        return {
+            level: batteryData.percentage,
+            status: batteryData.status,
+            isCharging: batteryData.status === 'CHARGING',
+            temperature: batteryData.temperature,
+            health: batteryData.health,
+            plugged: batteryData.plugged
+        }
+    } catch (error) {
+        console.log('⚠️ Erro ao obter informações da bateria (provavelmente não está no Termux):', error.message)
+        return {
+            level: null,
+            status: 'unknown',
+            isCharging: false,
+            temperature: null,
+            health: 'unknown',
+            plugged: 'none'
+        }
     }
 }
 
@@ -328,6 +372,18 @@ app.get('/api/settings', (req, res) => {
     }
 })
 
+// Função para atualizar informações da bateria
+async function updateBatteryInfo() {
+    try {
+        const batteryInfo = await getBatteryInfo()
+        botStatus.battery = batteryInfo
+        broadcast({ type: 'battery_status', data: batteryInfo })
+        console.log(`🔋 Bateria: ${batteryInfo.level || 'N/A'}% - Status: ${batteryInfo.status}`)
+    } catch (error) {
+        console.error('Erro ao atualizar informações da bateria:', error)
+    }
+}
+
 // Função para ser chamada pelo bot principal
 function updateBotStatus(status) {
     botStatus = { ...botStatus, ...status, lastUpdate: new Date() }
@@ -345,16 +401,24 @@ app.get('/', (req, res) => {
 })
 
 // Iniciar servidor
-app.listen(PORT, '0.0.0.0', () => {
+app.listen(PORT, '0.0.0.0', async () => {
     console.log(`🌐 Painel Web do Bot iniciado!`)
     console.log(`📱 Acesse de qualquer dispositivo na rede local:`)
     console.log(`   http://192.168.x.x:${PORT}`)
     console.log(`   http://localhost:${PORT}`)
     console.log(`🔄 WebSocket rodando na porta 3001`)
+    
+    // Atualizar bateria pela primeira vez
+    await updateBatteryInfo()
+    
+    // Configurar intervalo para atualizar bateria a cada 30 segundos
+    setInterval(updateBatteryInfo, 30000)
+    console.log(`🔋 Monitor de bateria ativado (atualizando a cada 30s)`)
 })
 
 // Exportar funções para uso do bot
-module.exports = {
+export {
     updateBotStatus,
-    getWebConfig
+    getWebConfig,
+    updateBatteryInfo
 }

@@ -86,6 +86,67 @@ body {
     50% { opacity: 0.5; }
 }
 
+/* Status Indicators Container */
+.status-indicators {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* Battery Indicator */
+.battery-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 6px 12px;
+    border-radius: 20px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.battery-icon {
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+.battery-text {
+    color: white;
+    font-size: 0.8rem;
+    font-weight: 600;
+    min-width: 35px;
+    text-align: center;
+}
+
+/* Battery Status Colors */
+.battery-indicator.charging .battery-icon {
+    animation: charging-pulse 1.5s infinite;
+}
+
+.battery-indicator.low .battery-icon {
+    color: #ef4444;
+    animation: low-battery-blink 1s infinite;
+}
+
+.battery-indicator.good .battery-icon {
+    color: #10b981;
+}
+
+.battery-indicator.medium .battery-icon {
+    color: #f59e0b;
+}
+
+/* Animations */
+@keyframes charging-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+@keyframes low-battery-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
 /* Main Content */
 .main {
     padding: 30px 0;
