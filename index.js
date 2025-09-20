@@ -157,14 +157,47 @@ async function loadWebConfigHTTP() {
         if (response.ok) {
             const data = await response.json()
             if (data.success) {
-                webConfig = { settings: data.data }
+                // Inicializar webConfig com estrutura completa
+                webConfig = { 
+                    settings: data.data,
+                    activeGroups: {},
+                    customCommands: []
+                }
+                
+                // Tentar carregar grupos ativos também
+                try {
+                    const groupsResponse = await fetch('http://localhost:3000/api/groups')
+                    if (groupsResponse.ok) {
+                        const groupsData = await groupsResponse.json()
+                        if (groupsData.success && groupsData.data.activeGroups) {
+                            webConfig.activeGroups = groupsData.data.activeGroups
+                        }
+                    }
+                } catch (error) {
+                    console.log('⚠️ Erro ao carregar grupos ativos via HTTP:', error.message)
+                }
+                
                 config.autoWelcome = webConfig.settings.autoWelcome !== false
                 console.log('🌐 Configurações web carregadas via HTTP')
+                console.log('📋 Estrutura webConfig:', {
+                    hasSettings: !!webConfig.settings,
+                    hasActiveGroups: !!webConfig.activeGroups,
+                    hasCustomCommands: !!webConfig.customCommands,
+                    activeGroupsCount: Object.keys(webConfig.activeGroups || {}).length
+                })
                 return true
             }
         }
     } catch (error) {
         console.log('⚠️ Não foi possível carregar configurações web via HTTP:', error.message)
+        
+        // Fallback: criar webConfig básico para evitar crashes
+        webConfig = {
+            settings: { autoWelcome: true, antiSpam: false, logActions: true },
+            activeGroups: {},
+            customCommands: []
+        }
+        console.log('🌐 WebConfig fallback criado para evitar crashes')
     }
     return false
 }
@@ -229,6 +262,13 @@ function isGroupActive(groupId) {
         return true // Padrão: todos ativos
     }
     
+    // Verificar se activeGroups existe e não é nulo
+    if (!webConfig.activeGroups) {
+        console.log('🌐 webConfig.activeGroups não existe, criando padrão para grupo:', groupId)
+        webConfig.activeGroups = {}
+        return true // Padrão: todos ativos
+    }
+    
     const isActive = webConfig.activeGroups[groupId] !== false
     console.log('🌐 Status do grupo', groupId, ':', isActive ? 'ATIVO' : 'INATIVO')
     return isActive
@@ -236,7 +276,16 @@ function isGroupActive(groupId) {
 
 // Obter comandos customizados
 function getCustomCommands() {
-    if (!webConfig) return []
+    if (!webConfig) {
+        console.log('🌐 WebConfig não disponível, nenhum comando customizado')
+        return []
+    }
+    
+    if (!webConfig.customCommands) {
+        console.log('🌐 webConfig.customCommands não existe, retornando array vazio')
+        webConfig.customCommands = []
+        return []
+    }
     
     return webConfig.customCommands || []
 }
@@ -425,7 +474,6 @@ async function startBot() {
     // Criar socket do WhatsApp
     const sock = makeWASocket({
         auth: state,
-        printQRInTerminal: true,
         logger: pino({ level: 'silent' }),
         browser: ['Bot Moderador', 'Desktop', '1.0.0']
     })
