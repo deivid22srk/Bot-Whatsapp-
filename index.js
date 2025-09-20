@@ -26,10 +26,17 @@ let botStats = {
 let webConfig = null
 let webServer = null
 
-// Tentar carregar servidor web
+// Tentar carregar servidor web (apenas se não estiver rodando externamente)
 try {
-    webServer = await import('./web/server.js')
-    console.log('🌐 Integração com painel web carregada')
+    // Verificar se o servidor web deve ser carregado internamente
+    const shouldLoadWebServer = !process.env.EXTERNAL_WEB_SERVER && process.argv.includes('--with-web')
+    
+    if (shouldLoadWebServer) {
+        webServer = await import('./web/server.js')
+        console.log('🌐 Integração com painel web carregada internamente')
+    } else {
+        console.log('🌐 Painel web em modo externo (use npm run web separadamente)')
+    }
 } catch (error) {
     console.log('⚠️ Painel web não disponível (execute npm run web em outro terminal)')
 }
@@ -82,12 +89,14 @@ function loadConfig() {
 // Carregar configurações do painel web
 function loadWebConfig() {
     try {
-        if (webServer) {
+        if (webServer && webServer.getWebConfig) {
             webConfig = webServer.getWebConfig()
             if (webConfig.settings) {
                 config.autoWelcome = webConfig.settings.autoWelcome !== false
             }
             console.log('🌐 Configurações web carregadas')
+        } else {
+            console.log('🌐 Configurações web não disponíveis (modo independente)')
         }
     } catch (error) {
         console.error('❌ Erro ao carregar configurações web:', error.message)
@@ -96,7 +105,10 @@ function loadWebConfig() {
 
 // Atualizar status para o painel web  
 function updateWebStatus(sock) {
-    if (!webServer) return
+    if (!webServer || !webServer.updateBotStatus) {
+        // Servidor web não carregado ou função não disponível
+        return
+    }
     
     try {
         botStats.connected = !!sock?.user?.id
