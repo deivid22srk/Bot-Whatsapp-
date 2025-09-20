@@ -40,7 +40,17 @@ let botStatus = {
         level: null,
         status: 'unknown',
         isCharging: false,
-        temperature: null
+        temperature: null,
+        health: 'unknown',
+        plugged: 'none',
+        voltage: null,
+        lastFullCharge: null,
+        history: [],
+        alerts: {
+            lowBattery: false,
+            criticalBattery: false,
+            highTemperature: false
+        }
     }
 }
 
@@ -96,7 +106,10 @@ async function getBatteryInfo() {
             isCharging: batteryData.status === 'CHARGING',
             temperature: batteryData.temperature,
             health: batteryData.health,
-            plugged: batteryData.plugged
+            plugged: batteryData.plugged,
+            voltage: batteryData.voltage || null,
+            scale: batteryData.scale || null,
+            technology: batteryData.technology || null
         }
     } catch (error) {
         console.log('⚠️ Erro ao obter informações da bateria (provavelmente não está no Termux):', error.message)
@@ -106,7 +119,10 @@ async function getBatteryInfo() {
             isCharging: false,
             temperature: null,
             health: 'unknown',
-            plugged: 'none'
+            plugged: 'none',
+            voltage: null,
+            scale: null,
+            technology: null
         }
     }
 }
@@ -143,6 +159,36 @@ app.get('/api/status', (req, res) => {
         success: true,
         data: botStatus
     })
+})
+
+// 1.1. Atualizar status do bot (via HTTP)
+app.put('/api/status', (req, res) => {
+    try {
+        const newStatus = req.body
+        
+        // Atualizar status do bot
+        botStatus = { 
+            ...botStatus, 
+            ...newStatus, 
+            lastUpdate: new Date() 
+        }
+        
+        // Broadcast para todos os clientes WebSocket
+        broadcast({ type: 'bot_status', data: botStatus })
+        
+        console.log(`🔄 Status do bot atualizado via HTTP: ${botStatus.connected ? 'Conectado' : 'Desconectado'} - ${botStatus.groups?.length || 0} grupos`)
+        
+        res.json({
+            success: true,
+            message: 'Status atualizado com sucesso',
+            data: botStatus
+        })
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message
+        })
+    }
 })
 
 // 2. Listar grupos
@@ -372,13 +418,109 @@ app.get('/api/settings', (req, res) => {
     }
 })
 
+// 10. Obter estatísticas detalhadas da bateria
+app.get('/api/battery/stats', (req, res) => {
+    try {
+        const batteryStats = {
+            current: botStatus.battery,
+            history: botStatus.battery.history || [],
+            summary: {
+                averageLevel: null,
+                minLevel: null,
+                maxLevel: null,
+                averageTemperature: null,
+                maxTemperature: null,
+                chargingCycles: 0,
+                lastUpdated: botStatus.battery.timestamp
+            }
+        }
+        
+        // Calcular estatísticas se houver histórico
+        if (batteryStats.history.length > 0) {
+            const levels = batteryStats.history.map(h => h.level).filter(l => l !== null)
+            const temps = batteryStats.history.map(h => h.temperature).filter(t => t !== null)
+            
+            if (levels.length > 0) {
+                batteryStats.summary.averageLevel = Math.round(levels.reduce((a, b) => a + b) / levels.length)
+                batteryStats.summary.minLevel = Math.min(...levels)
+                batteryStats.summary.maxLevel = Math.max(...levels)
+            }
+            
+            if (temps.length > 0) {
+                batteryStats.summary.averageTemperature = Math.round(temps.reduce((a, b) => a + b) / temps.length * 10) / 10
+                batteryStats.summary.maxTemperature = Math.max(...temps)
+            }
+            
+            // Contar ciclos de carregamento
+            let wasCharging = false
+            batteryStats.summary.chargingCycles = batteryStats.history.reduce((cycles, reading) => {
+                const isCharging = reading.status === 'CHARGING'
+                if (isCharging && !wasCharging) cycles++
+                wasCharging = isCharging
+                return cycles
+            }, 0)
+        }
+        
+        res.json({
+            success: true,
+            data: batteryStats
+        })
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message
+        })
+    }
+})
+
 // Função para atualizar informações da bateria
 async function updateBatteryInfo() {
     try {
         const batteryInfo = await getBatteryInfo()
-        botStatus.battery = batteryInfo
-        broadcast({ type: 'battery_status', data: batteryInfo })
-        console.log(`🔋 Bateria: ${batteryInfo.level || 'N/A'}% - Status: ${batteryInfo.status}`)
+        
+        // Adicionar timestamp às informações
+        batteryInfo.timestamp = new Date().toISOString()
+        
+        // Adicionar ao histórico (manter últimas 20 leituras)
+        if (!botStatus.battery.history) {
+            botStatus.battery.history = []
+        }
+        botStatus.battery.history.push({
+            level: batteryInfo.level,
+            temperature: batteryInfo.temperature,
+            status: batteryInfo.status,
+            timestamp: batteryInfo.timestamp
+        })
+        
+        // Manter apenas últimas 20 leituras
+        if (botStatus.battery.history.length > 20) {
+            botStatus.battery.history = botStatus.battery.history.slice(-20)
+        }
+        
+        // Verificar alertas
+        const alerts = {
+            lowBattery: batteryInfo.level !== null && batteryInfo.level <= 20,
+            criticalBattery: batteryInfo.level !== null && batteryInfo.level <= 10,
+            highTemperature: batteryInfo.temperature !== null && batteryInfo.temperature >= 40
+        }
+        
+        // Atualizar status da bateria
+        botStatus.battery = { 
+            ...batteryInfo, 
+            history: botStatus.battery.history,
+            alerts 
+        }
+        
+        // Enviar alertas se necessário
+        const previousAlerts = botStatus.battery.alerts || {}
+        if (alerts.criticalBattery && !previousAlerts.criticalBattery) {
+            console.log('🚨 ALERTA CRÍTICO: Bateria muito baixa (' + batteryInfo.level + '%)')
+        } else if (alerts.lowBattery && !previousAlerts.lowBattery) {
+            console.log('⚠️ ALERTA: Bateria baixa (' + batteryInfo.level + '%)')
+        }
+        
+        broadcast({ type: 'battery_status', data: botStatus.battery })
+        console.log(`🔋 Bateria: ${batteryInfo.level || 'N/A'}% - Status: ${batteryInfo.status} - Temp: ${batteryInfo.temperature || 'N/A'}°C`)
     } catch (error) {
         console.error('Erro ao atualizar informações da bateria:', error)
     }

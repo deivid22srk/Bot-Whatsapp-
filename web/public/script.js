@@ -166,12 +166,26 @@ function updateBatteryIndicator(batteryInfo) {
     
     const level = batteryInfo.level
     const isCharging = batteryInfo.isCharging
+    const temperature = batteryInfo.temperature
     
     // Atualizar texto da porcentagem
     batteryText.textContent = `${level}%`
     
+    // Adicionar tooltip com informações detalhadas
+    const tooltipText = `
+Bateria: ${level}%
+Status: ${batteryInfo.status || 'Desconhecido'}
+${temperature ? `Temperatura: ${temperature}°C` : ''}
+${batteryInfo.health ? `Saúde: ${batteryInfo.health}` : ''}
+${batteryInfo.voltage ? `Voltagem: ${batteryInfo.voltage}mV` : ''}
+${batteryInfo.technology ? `Tecnologia: ${batteryInfo.technology}` : ''}
+Última atualização: ${new Date().toLocaleTimeString()}
+    `.trim()
+    
+    batteryIndicator.title = tooltipText
+    
     // Remover classes antigas
-    batteryIndicator.classList.remove('charging', 'low', 'medium', 'good')
+    batteryIndicator.classList.remove('charging', 'low', 'medium', 'good', 'critical')
     
     // Adicionar classe baseada no status
     if (isCharging) {
@@ -179,7 +193,10 @@ function updateBatteryIndicator(batteryInfo) {
         batteryIcon.textContent = '⚡' // Ícone de carregamento
     } else {
         // Ícones baseados no nível da bateria
-        if (level <= 20) {
+        if (level <= 10) {
+            batteryIndicator.classList.add('critical')
+            batteryIcon.textContent = '🪫' // Bateria crítica
+        } else if (level <= 20) {
             batteryIndicator.classList.add('low')
             batteryIcon.textContent = '🪫' // Bateria baixa
         } else if (level <= 50) {
@@ -191,7 +208,17 @@ function updateBatteryIndicator(batteryInfo) {
         }
     }
     
-    console.log(`🔋 Bateria atualizada: ${level}% - ${isCharging ? 'Carregando' : 'Descarregando'}`)
+    // Verificar alertas de temperatura
+    if (temperature && temperature >= 40) {
+        batteryIcon.textContent = '🔥' // Temperatura alta
+        batteryIndicator.classList.add('hot')
+    }
+    
+    // Log com mais informações
+    console.log(`🔋 Bateria atualizada: ${level}% - ${isCharging ? 'Carregando' : 'Descarregando'}${temperature ? ` - ${temperature}°C` : ''}`)
+    
+    // Atualizar também a aba de estatísticas se estiver ativa
+    updateBatteryStats(batteryInfo)
 }
 
 // Carregar grupos
@@ -620,3 +647,117 @@ setInterval(() => {
         loadBotStatus()
     }
 }, 30000) // A cada 30 segundos
+
+// Atualizar estatísticas detalhadas da bateria
+function updateBatteryStats(batteryInfo) {
+    if (!batteryInfo || batteryInfo.level === null) return
+    
+    // Atualizar display grande da bateria
+    const batteryIconLarge = document.getElementById('batteryIconLarge')
+    const batteryPercentageLarge = document.getElementById('batteryPercentageLarge')
+    
+    if (batteryIconLarge && batteryPercentageLarge) {
+        batteryPercentageLarge.textContent = `${batteryInfo.level}%`
+        
+        if (batteryInfo.isCharging) {
+            batteryIconLarge.textContent = '⚡'
+        } else if (batteryInfo.level <= 10) {
+            batteryIconLarge.textContent = '🪫'
+        } else {
+            batteryIconLarge.textContent = '🔋'
+        }
+    }
+    
+    // Atualizar detalhes
+    updateElement('batteryStatusDetail', batteryInfo.status || 'Desconhecido')
+    updateElement('batteryTempDetail', batteryInfo.temperature ? `${batteryInfo.temperature}°C` : '--')
+    updateElement('batteryHealthDetail', batteryInfo.health || '--')
+    updateElement('batteryVoltageDetail', batteryInfo.voltage ? `${batteryInfo.voltage}mV` : '--')
+    
+    // Carregar estatísticas completas
+    loadBatteryFullStats()
+}
+
+// Carregar estatísticas completas da bateria
+async function loadBatteryFullStats() {
+    try {
+        const response = await fetch('/api/battery/stats')
+        const data = await response.json()
+        
+        if (data.success && data.data.summary) {
+            const summary = data.data.summary
+            
+            updateElement('batteryAverage', summary.averageLevel ? `${summary.averageLevel}%` : '--')
+            updateElement('batteryMin', summary.minLevel ? `${summary.minLevel}%` : '--')
+            updateElement('batteryMax', summary.maxLevel ? `${summary.maxLevel}%` : '--')
+            updateElement('batteryTempMax', summary.maxTemperature ? `${summary.maxTemperature}°C` : '--')
+            
+            // Atualizar gráfico do histórico (versão simples)
+            updateBatteryHistoryChart(data.data.history)
+        }
+    } catch (error) {
+        console.error('Erro ao carregar estatísticas da bateria:', error)
+    }
+}
+
+// Atualizar gráfico do histórico (versão textual simples)
+function updateBatteryHistoryChart(history) {
+    const chartElement = document.getElementById('batteryHistoryChart')
+    if (!chartElement || !history || history.length === 0) {
+        return
+    }
+    
+    const recentHistory = history.slice(-10) // Últimas 10 leituras
+    const chartHTML = `
+        <div class="history-list">
+            ${recentHistory.map(reading => `
+                <div class="history-item">
+                    <span class="history-time">${new Date(reading.timestamp).toLocaleTimeString()}</span>
+                    <span class="history-level">${reading.level || '--'}%</span>
+                    <span class="history-temp">${reading.temperature || '--'}°C</span>
+                    <span class="history-status">${reading.status || '--'}</span>
+                </div>
+            `).join('')}
+        </div>
+        <style>
+            .history-list { display: flex; flex-direction: column; gap: 8px; }
+            .history-item { 
+                display: flex; 
+                justify-content: space-between; 
+                padding: 8px; 
+                background: rgba(255,255,255,0.05); 
+                border-radius: 6px;
+                font-size: 0.85rem;
+            }
+            .history-time { color: rgba(255,255,255,0.7); }
+            .history-level { color: #10b981; font-weight: bold; }
+            .history-temp { color: #f59e0b; }
+            .history-status { color: rgba(255,255,255,0.8); }
+        </style>
+    `
+    
+    chartElement.innerHTML = chartHTML
+}
+
+// Função auxiliar para atualizar elemento
+function updateElement(id, value) {
+    const element = document.getElementById(id)
+    if (element) {
+        element.textContent = value
+    }
+}
+
+// Carregar estatísticas quando a aba da bateria for ativada
+document.addEventListener('DOMContentLoaded', () => {
+    // Interceptar mudança de aba
+    const originalSwitchTab = window.switchTab
+    window.switchTab = function(tabName) {
+        if (typeof originalSwitchTab === 'function') {
+            originalSwitchTab(tabName)
+        }
+        
+        if (tabName === 'bateria') {
+            loadBatteryFullStats()
+        }
+    }
+})

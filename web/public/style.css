@@ -123,6 +123,11 @@ body {
     animation: charging-pulse 1.5s infinite;
 }
 
+.battery-indicator.critical .battery-icon {
+    color: #dc2626;
+    animation: critical-battery-blink 0.8s infinite;
+}
+
 .battery-indicator.low .battery-icon {
     color: #ef4444;
     animation: low-battery-blink 1s infinite;
@@ -136,15 +141,30 @@ body {
     color: #f59e0b;
 }
 
+.battery-indicator.hot .battery-icon {
+    color: #ff6b35;
+    animation: hot-temperature-pulse 1.2s infinite;
+}
+
 /* Animations */
 @keyframes charging-pulse {
     0%, 100% { transform: scale(1); }
     50% { transform: scale(1.1); }
 }
 
+@keyframes critical-battery-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
 @keyframes low-battery-blink {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.5; }
+}
+
+@keyframes hot-temperature-pulse {
+    0%, 100% { transform: scale(1); filter: brightness(1); }
+    50% { transform: scale(1.05); filter: brightness(1.2); }
 }
 
 /* Main Content */
@@ -862,4 +882,137 @@ input:checked + .toggle-slider:before {
     .command-item {
         padding: 15px;
     }
+}
+
+/* Battery Statistics Styles */
+.battery-stats-container {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+}
+
+@media (min-width: 768px) {
+    .battery-stats-container {
+        grid-template-columns: 1fr 1fr;
+    }
+    
+    .battery-status-card {
+        grid-column: span 2;
+    }
+}
+
+.battery-status-card,
+.battery-history-card,
+.battery-summary-card {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 15px;
+    padding: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.battery-status-card h3,
+.battery-history-card h3,
+.battery-summary-card h3 {
+    color: white;
+    margin-bottom: 15px;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.battery-current-info {
+    display: flex;
+    align-items: center;
+    gap: 30px;
+    flex-wrap: wrap;
+}
+
+.battery-level-display {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.battery-icon-large {
+    font-size: 4rem;
+    filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3));
+}
+
+.battery-percentage {
+    font-size: 2rem;
+    font-weight: bold;
+    color: white;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.battery-details {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.battery-detail-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.battery-detail-item .label {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.9rem;
+}
+
+.battery-detail-item .value {
+    color: white;
+    font-weight: 600;
+}
+
+.battery-history-chart {
+    min-height: 200px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    padding: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.battery-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 15px;
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.stat-item .stat-icon {
+    font-size: 1.5rem;
+}
+
+.stat-item .stat-value {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: white;
+}
+
+.stat-item .stat-label {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.7);
 }

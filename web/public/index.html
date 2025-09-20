@@ -72,6 +72,7 @@
             <nav class="tabs">
                 <button class="tab-button active" data-tab="grupos">📱 Gerenciar Grupos</button>
                 <button class="tab-button" data-tab="comandos">⚡ Comandos Customizados</button>
+                <button class="tab-button" data-tab="bateria">🔋 Estatísticas da Bateria</button>
                 <button class="tab-button" data-tab="configuracoes">⚙️ Configurações</button>
             </nav>
 
@@ -106,6 +107,88 @@
                     <div class="commands-container">
                         <div class="commands-list" id="commandsList">
                             <div class="loading">Carregando comandos...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bateria Tab -->
+                <div class="tab-panel" id="bateria">
+                    <div class="panel-header">
+                        <h2>🔋 Estatísticas da Bateria</h2>
+                        <p>Monitoramento detalhado da bateria do dispositivo</p>
+                    </div>
+                    
+                    <div class="battery-stats-container">
+                        <!-- Status Atual -->
+                        <div class="battery-status-card">
+                            <h3>📊 Status Atual</h3>
+                            <div class="battery-current-info">
+                                <div class="battery-level-display">
+                                    <div class="battery-icon-large" id="batteryIconLarge">🔋</div>
+                                    <div class="battery-percentage" id="batteryPercentageLarge">--</div>
+                                </div>
+                                <div class="battery-details">
+                                    <div class="battery-detail-item">
+                                        <span class="label">Status:</span>
+                                        <span class="value" id="batteryStatusDetail">Desconhecido</span>
+                                    </div>
+                                    <div class="battery-detail-item">
+                                        <span class="label">Temperatura:</span>
+                                        <span class="value" id="batteryTempDetail">--</span>
+                                    </div>
+                                    <div class="battery-detail-item">
+                                        <span class="label">Saúde:</span>
+                                        <span class="value" id="batteryHealthDetail">--</span>
+                                    </div>
+                                    <div class="battery-detail-item">
+                                        <span class="label">Voltagem:</span>
+                                        <span class="value" id="batteryVoltageDetail">--</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Histórico -->
+                        <div class="battery-history-card">
+                            <h3>📈 Histórico Recente</h3>
+                            <div class="battery-history-chart" id="batteryHistoryChart">
+                                <div class="loading">Carregando dados...</div>
+                            </div>
+                        </div>
+
+                        <!-- Estatísticas -->
+                        <div class="battery-summary-card">
+                            <h3>📋 Resumo</h3>
+                            <div class="battery-stats-grid">
+                                <div class="stat-item">
+                                    <div class="stat-icon">📊</div>
+                                    <div class="stat-info">
+                                        <div class="stat-value" id="batteryAverage">--</div>
+                                        <div class="stat-label">Nível Médio</div>
+                                    </div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-icon">⬇️</div>
+                                    <div class="stat-info">
+                                        <div class="stat-value" id="batteryMin">--</div>
+                                        <div class="stat-label">Nível Mínimo</div>
+                                    </div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-icon">⬆️</div>
+                                    <div class="stat-info">
+                                        <div class="stat-value" id="batteryMax">--</div>
+                                        <div class="stat-label">Nível Máximo</div>
+                                    </div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-icon">🌡️</div>
+                                    <div class="stat-info">
+                                        <div class="stat-value" id="batteryTempMax">--</div>
+                                        <div class="stat-label">Temp. Máxima</div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
