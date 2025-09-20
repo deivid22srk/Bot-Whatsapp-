@@ -265,6 +265,12 @@ function isGroupActive(groupId) {
         return true // Padrão: todos ativos
     }
     
+    // Verificar se activeGroups existe antes de acessar
+    if (!webConfig.activeGroups) {
+        console.log('🌐 ActiveGroups não configurado, grupo ativo por padrão:', groupId)
+        return true
+    }
+    
     const isActive = webConfig.activeGroups[groupId] !== false
     console.log('🌐 Status do grupo', groupId, ':', isActive ? 'ATIVO' : 'INATIVO')
     return isActive
@@ -338,15 +344,20 @@ function createExampleConfig() {
 
 // Verificar se o usuário é admin
 async function isAdmin(userNumber, sock = null, groupId = null) {
-    const cleanNumber = userNumber.replace('@s.whatsapp.net', '').replace(':.*', '')
+    const cleanNumber = userNumber.replace('@s.whatsapp.net', '').replace(/:.*/, '')
+    
+    console.log(`🔍 [DEBUG ADMIN] Verificando: ${cleanNumber}`)
     
     // 1. Verificar se é admin configurado ou owner configurado
     let isAdminUser = config.admins.includes(cleanNumber) || cleanNumber === config.ownerNumber
+    console.log(`📋 [DEBUG ADMIN] Admin/Owner configurado: ${isAdminUser}`)
     
     // 2. Verificar se é o dono do número conectado ao bot
     if (sock && sock.user && sock.user.id) {
-        const botOwnerNumber = sock.user.id.replace(':.*', '').replace('@s.whatsapp.net', '')
+        const botOwnerNumber = sock.user.id.replace(/:.*/, '').replace('@s.whatsapp.net', '')
+        console.log(`🤖 [DEBUG ADMIN] Bot owner: ${botOwnerNumber}, User: ${cleanNumber}`)
         if (cleanNumber === botOwnerNumber) {
+            console.log(`👑 [DEBUG ADMIN] É o dono do bot!`)
             isAdminUser = true
         }
     }
@@ -354,6 +365,7 @@ async function isAdmin(userNumber, sock = null, groupId = null) {
     // 3. NOVO: Verificar se é admin do grupo atual
     if (!isAdminUser && sock && groupId && groupId.endsWith('@g.us')) {
         try {
+            console.log(`👥 [DEBUG ADMIN] Verificando admin do grupo: ${groupId}`)
             const groupMetadata = await sock.groupMetadata(groupId)
             const participant = groupMetadata.participants.find(p => {
                 const participantNumber = p.id.replace('@s.whatsapp.net', '')
@@ -362,14 +374,21 @@ async function isAdmin(userNumber, sock = null, groupId = null) {
                        p.id === (cleanNumber + '@s.whatsapp.net')
             })
             
-            if (participant && (participant.admin === 'admin' || participant.admin === 'superadmin')) {
-                isAdminUser = true
+            if (participant) {
+                console.log(`👤 [DEBUG ADMIN] Participante encontrado: ${participant.id}, admin: ${participant.admin}`)
+                if (participant.admin === 'admin' || participant.admin === 'superadmin') {
+                    console.log(`🛡️ [DEBUG ADMIN] É admin do grupo!`)
+                    isAdminUser = true
+                }
+            } else {
+                console.log(`⚠️ [DEBUG ADMIN] Participante não encontrado no grupo`)
             }
         } catch (error) {
-            console.error('❌ Erro ao verificar admins do grupo:', error.message)
+            console.error('❌ [DEBUG ADMIN] Erro ao verificar admins do grupo:', error.message)
         }
     }
     
+    console.log(`🎯 [DEBUG ADMIN] RESULTADO FINAL: ${isAdminUser}`)
     return isAdminUser
 }
 
@@ -410,7 +429,6 @@ async function startBot() {
     // Criar socket do WhatsApp
     sock = makeWASocket({
         auth: state,
-        printQRInTerminal: true,
         logger: pino({ level: 'silent' }),
         browser: ['Bot Moderador', 'Desktop', '1.0.0']
     })
@@ -423,7 +441,7 @@ async function startBot() {
         const { connection, lastDisconnect, qr } = update
         
         if (qr) {
-            console.log('📱 Escaneie o QR Code acima com seu WhatsApp!')
+            console.log('📱 Escaneie o QR Code abaixo com seu WhatsApp!')
             qrcode.generate(qr, { small: true })
         }
         
@@ -537,7 +555,7 @@ async function startBot() {
         }
         const isGroup = message.key.remoteJid?.endsWith('@g.us')
         const senderNumber = message.key.fromMe 
-            ? sock.user.id.replace(':.*', '')
+            ? sock.user.id.replace(/:.*/, '') + '@s.whatsapp.net'
             : (message.key.participant || message.key.remoteJid)
         const groupId = message.key.remoteJid
 
