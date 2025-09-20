@@ -98,6 +98,9 @@ function handleWebSocketMessage(data) {
             loadGroups()
             loadCommands()
             break
+        case 'battery_status':
+            updateBatteryIndicator(data.data)
+            break
         default:
             console.log('Mensagem WebSocket não tratada:', data)
     }
@@ -112,6 +115,10 @@ async function loadBotStatus() {
         if (data.success) {
             appState.botStatus = data.data
             updateBotStatus()
+            // Atualizar bateria se disponível
+            if (data.data.battery) {
+                updateBatteryIndicator(data.data.battery)
+            }
         }
     } catch (error) {
         console.error('Erro ao carregar status:', error)
@@ -140,6 +147,51 @@ function updateBotStatus() {
     document.getElementById('activeGroups').textContent = status?.activeGroups || 0
     document.getElementById('totalMessages').textContent = status?.totalMessages || 0
     document.getElementById('customCommands').textContent = appState.commands.length
+}
+
+// Atualizar indicador de bateria
+function updateBatteryIndicator(batteryInfo) {
+    const batteryIndicator = document.getElementById('batteryIndicator')
+    const batteryIcon = document.getElementById('batteryIcon')
+    const batteryText = document.getElementById('batteryText')
+    
+    if (!batteryInfo || batteryInfo.level === null) {
+        // Caso não seja Termux ou não tenha informações de bateria
+        batteryIndicator.style.display = 'none'
+        return
+    }
+    
+    // Mostrar indicador
+    batteryIndicator.style.display = 'flex'
+    
+    const level = batteryInfo.level
+    const isCharging = batteryInfo.isCharging
+    
+    // Atualizar texto da porcentagem
+    batteryText.textContent = `${level}%`
+    
+    // Remover classes antigas
+    batteryIndicator.classList.remove('charging', 'low', 'medium', 'good')
+    
+    // Adicionar classe baseada no status
+    if (isCharging) {
+        batteryIndicator.classList.add('charging')
+        batteryIcon.textContent = '⚡' // Ícone de carregamento
+    } else {
+        // Ícones baseados no nível da bateria
+        if (level <= 20) {
+            batteryIndicator.classList.add('low')
+            batteryIcon.textContent = '🪫' // Bateria baixa
+        } else if (level <= 50) {
+            batteryIndicator.classList.add('medium')
+            batteryIcon.textContent = '🔋' // Bateria média
+        } else {
+            batteryIndicator.classList.add('good')
+            batteryIcon.textContent = '🔋' // Bateria boa
+        }
+    }
+    
+    console.log(`🔋 Bateria atualizada: ${level}% - ${isCharging ? 'Carregando' : 'Descarregando'}`)
 }
 
 // Carregar grupos
