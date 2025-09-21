@@ -755,8 +755,18 @@ async function startBot() {
                             .filter(p => p.admin === 'admin' || p.admin === 'superadmin')
                             .map(p => p.id.replace('@s.whatsapp.net', ''))
                         
+                        let errorText = 'Erro: O bot não é administrador do grupo.\\n\\nComo resolver:\\n'
+                        errorText += '1. Abra "Informações do grupo"\\n'
+                        errorText += '2. Toque em "Participantes"\\n'
+                        errorText += '3. Encontre o bot na lista\\n'
+                        errorText += '4. Toque no nome do bot\\n'
+                        errorText += '5. Selecione "Tornar administrador"\\n\\n'
+                        errorText += 'Admins atuais: ' + groupAdmins.length + '\\n'
+                        errorText += groupAdmins.map(admin => '• ' + admin).join('\\n') + '\\n\\n'
+                        errorText += 'Bot: ' + botNumber + ' (precisa ser promovido)'
+                        
                         await sock.sendMessage(groupId, {
-                            text: `❌ Erro: O bot não é administrador do grupo.\n\n📄 **Como resolver:**\n1. Abra "Informações do grupo"\n2. Toque em "Participantes"\n3. Encontre o bot na lista\n4. Toque no nome do bot\n5. Selecione "Tornar administrador"\n\n👥 **Admins atuais:** ${groupAdmins.length}\n${groupAdmins.map(admin => `• ${admin}`).join('\n')}\n\n🤖 **Bot:** ${botNumber} (precisa ser promovido)`,
+                            text: errorText,
                             quoted: message
                         })
                         return
@@ -787,7 +797,7 @@ async function startBot() {
                     } else if (error.output?.statusCode === 404) {
                         errorMessage += '👻 Usuário não encontrado no grupo ou já foi removido.'
                     } else {
-                        errorMessage += `🔍 Detalhes técnicos: ${error.message}\n\n💡 Possíveis soluções:\n• Certifique-se que o bot é admin\n• Verifique se o usuário ainda está no grupo\n• Tente novamente em alguns segundos`
+                        errorMessage += 'Detalhes técnicos: ' + error.message + '\\n\\nPossíveis soluções:\\n• Certifique-se que o bot é admin\\n• Verifique se o usuário ainda está no grupo\\n• Tente novamente em alguns segundos'
                     }
                     
                     await sock.sendMessage(groupId, {
@@ -801,41 +811,31 @@ async function startBot() {
             if (command === 'help' || command === 'ajuda') {
                 console.log('🎆 === PROCESSANDO COMANDO HELP ===')
                 const isUserAdmin = await isAdmin(senderNumber, sock, groupId)
-                let helpText = `🤖 *Comandos do Bot*
-
-*Para Administradores:*
-• \`${config.prefix}kick @usuario\` - Remove um usuário do grupo
-• \`${config.prefix}remover @usuario\` - Remove um usuário do grupo`
+                let helpText = '*Comandos do Bot*\\n\\n*Para Administradores:*\\n'
+                helpText += '• `' + config.prefix + 'kick @usuario` - Remove um usuário do grupo\\n'
+                helpText += '• `' + config.prefix + 'remover @usuario` - Remove um usuário do grupo\\n'
 
                 if (isUserAdmin) {
-                    helpText += `
-• \`${config.prefix}debug\` - Informações técnicas do bot
-• \`${config.prefix}testmention @usuario\` - Testar detecção de menções
-• \`${config.prefix}testowner\` - Testar se você é reconhecido como dono
-• \`${config.prefix}botadmin\` - Verificar se bot é admin do grupo
-• \`${config.prefix}reload\` - 🔄 Recarregar comandos customizados`
+                    helpText += '• `' + config.prefix + 'debug` - Informações técnicas do bot\\n'
+                    helpText += '• `' + config.prefix + 'testmention @usuario` - Testar detecção de menções\\n'
+                    helpText += '• `' + config.prefix + 'testowner` - Testar se você é reconhecido como dono\\n'
+                    helpText += '• `' + config.prefix + 'botadmin` - Verificar se bot é admin do grupo\\n'
+                    helpText += '• `' + config.prefix + 'reload` - Recarregar comandos customizados\\n'
                 }
 
-                helpText += `
-
-*Geral:*
-• \`${config.prefix}help\` - Mostra esta mensagem
-• \`${config.prefix}regras\` - Exibe as regras do grupo
-• \`${config.prefix}pix\` - Informações para doação/suporte
-• \`${config.prefix}donate\` - Como apoiar o bot
-• \`${config.prefix}testowner\` - Testa se você é reconhecido como dono
-• \`${config.prefix}botadmin\` - Verifica se o bot é admin do grupo
-
-*Funcionalidades Automáticas:*
-✅ Mensagem de boas-vindas para novos membros
-✅ Sistema de moderação administrativo
-✅ Comandos personalizados dinâmicos
-
-${!isUserAdmin ? '💡 *Você não é administrador - alguns comandos não estão visíveis*' : '👨‍💼 *Você é administrador - comandos completos disponíveis*'}
-
----
-💡 ${config.donation.message}
-❤️ Use \`${config.prefix}pix\` para apoiar o projeto!`
+                helpText += '\\n*Geral:*\\n'
+                helpText += '• `' + config.prefix + 'help` - Mostra esta mensagem\\n'
+                helpText += '• `' + config.prefix + 'regras` - Exibe as regras do grupo\\n'
+                helpText += '• `' + config.prefix + 'pix` - Informações para doação/suporte\\n'
+                helpText += '• `' + config.prefix + 'donate` - Como apoiar o bot\\n'
+                helpText += '• `' + config.prefix + 'testowner` - Testa se você é reconhecido como dono\\n'
+                helpText += '• `' + config.prefix + 'botadmin` - Verifica se o bot é admin do grupo\\n\\n'
+                helpText += '*Funcionalidades Automáticas:*\\n'
+                helpText += 'Mensagem de boas-vindas para novos membros\\n'
+                helpText += 'Sistema de moderação administrativo\\n'
+                helpText += 'Comandos personalizados dinâmicos\\n\\n'
+                helpText += (!isUserAdmin ? '*Você não é administrador - alguns comandos não estão visíveis*' : '*Você é administrador - comandos completos disponíveis*') + '\\n\\n'
+                helpText += '---\\n' + config.donation.message + '\\nUse `' + config.prefix + 'pix` para apoiar o projeto!'
 
                 await sock.sendMessage(groupId, {
                     text: helpText,
@@ -846,11 +846,7 @@ ${!isUserAdmin ? '💡 *Você não é administrador - alguns comandos não estã
             // Comando para exibir regras
             if (command === 'regras' || command === 'rules') {
                 console.log('📋 === PROCESSANDO COMANDO REGRAS ===')
-                const rulesWithFooter = `${WELCOME_MESSAGE}
-
----
-💡 ${config.donation.message}
-❤️ Use \`${config.prefix}pix\` para apoiar o bot!`
+                const rulesWithFooter = WELCOME_MESSAGE + '\\n\\n---\\n' + config.donation.message + '\\nUse `' + config.prefix + 'pix` para apoiar o bot!'
                 
                 await sock.sendMessage(groupId, {
                     text: rulesWithFooter,
@@ -862,38 +858,29 @@ ${!isUserAdmin ? '💡 *Você não é administrador - alguns comandos não estã
             if (command === 'pix' || command === 'donate' || command === 'doar') {
                 console.log('💰 === PROCESSANDO COMANDO PIX/DONATE ===')
                 
-                const donationMessage = `💰 *Apoie o Bot Moderador*
-
-🤖 **Por que doar?**
-${config.donation.message}
-
-💸 **Custos mensais:**
-• 🔋 Energia elétrica 24h
-• 📱 Internet móvel ilimitada
-• ⚡ Manutenção e atualizações
-• 🛡️ Segurança e backups
-
-📋 **Chave PIX:**
-\`${config.donation.pixKey}\`
-
-📱 **Como doar:**
-1. Copie a chave PIX acima
-2. Abra seu app bancário
-3. Escolha PIX → Enviar
-4. Cole a chave
-5. Digite o valor (qualquer quantia ajuda!)
-
-❤️ **Sua contribuição:**
-• Mantém o bot online 24h
-• Permite novas funcionalidades
-• Garante estabilidade
-• Mostra que você valoriza o serviço
-
-🙏 **Obrigado pelo apoio!**
-Cada doação, mesmo pequena, faz toda a diferença!
-
----
-🎯 Comando: \`${config.prefix}pix\` ou \`${config.prefix}donate\`
+                let donationMessage = '*Apoie o Bot Moderador*\\n\\n'
+                donationMessage += '**Por que doar?**\\n' + config.donation.message + '\\n\\n'
+                donationMessage += '**Custos mensais:**\\n'
+                donationMessage += '• Energia elétrica 24h\\n'
+                donationMessage += '• Internet móvel ilimitada\\n'
+                donationMessage += '• Manutenção e atualizações\\n'
+                donationMessage += '• Segurança e backups\\n\\n'
+                donationMessage += '**Chave PIX:**\\n`' + config.donation.pixKey + '`\\n\\n'
+                donationMessage += '**Como doar:**\\n'
+                donationMessage += '1. Copie a chave PIX acima\\n'
+                donationMessage += '2. Abra seu app bancário\\n'
+                donationMessage += '3. Escolha PIX → Enviar\\n'
+                donationMessage += '4. Cole a chave\\n'
+                donationMessage += '5. Digite o valor (qualquer quantia ajuda!)\\n\\n'
+                donationMessage += '**Sua contribuição:**\\n'
+                donationMessage += '• Mantém o bot online 24h\\n'
+                donationMessage += '• Permite novas funcionalidades\\n'
+                donationMessage += '• Garante estabilidade\\n'
+                donationMessage += '• Mostra que você valoriza o serviço\\n\\n'
+                donationMessage += '**Obrigado pelo apoio!**\\n'
+                donationMessage += 'Cada doação, mesmo pequena, faz toda a diferença!\\n\\n'
+                donationMessage += '---\\n'
+                donationMessage += 'Comando: `' + config.prefix + 'pix` ou `' + config.prefix + 'donate`'
 
                 await sock.sendMessage(groupId, {
                     text: donationMessage,
@@ -1013,25 +1000,11 @@ Cada doação, mesmo pequena, faz toda a diferença!
 
             // Comando para testar extração de menção
             if (command === 'testmention' && (await isAdmin(senderNumber, sock, groupId))) {
-                console.log('🧪 Testando extração de menção...')
+                console.log('Testando extração de menção...')
                 const mentionedNumber = getMentionedNumber(message)
                 
-                // TEMPLATE LITERAL COMMENTED - SYNTAX ERROR
-
-${mentionedNumber ? 
-    `✅ Menção encontrada: ${mentionedNumber}` : 
-    '❌ Nenhuma menção detectada'
-}
-
-📋 *Estrutura da mensagem:*
-\`\`\`
-${JSON.stringify(message.message, null, 2)}
-\`\`\`
-
-💡 Se não detectou a menção, tente:
-1. Mencionar tocando no nome do usuário
-2. Usar @ seguido do nome completo
-3. Verificar se está realmente mencionando`
+                const result = mentionedNumber || 'Nao encontrada'
+                const testResult = 'Teste de mencao: ' + result
 
                 await sock.sendMessage(groupId, {
                     text: testResult,
@@ -1047,17 +1020,16 @@ ${JSON.stringify(message.message, null, 2)}
                     await loadWebConfig()
                     const customCommands = await getCustomCommands(true)
                     
-                    const reloadResult = `🔄 *Configurações Recarregadas*
-
-✅ *Sucesso!* As configurações foram atualizadas.
-
-📝 *Comandos customizados:* ${customCommands.length}
-${customCommands.length > 0 ? 
-    `\n🎯 *Disponíveis:*\n${customCommands.map(cmd => `• !${cmd.command} ${cmd.adminOnly ? '(🔐 admin)' : ''}`).join('\n')}` : 
-    '\n⚠️ Nenhum comando customizado configurado'
-}
-
-🕰️ *Atualizado:* ${new Date().toLocaleTimeString()}`
+                    let reloadResult = '*Configurações Recarregadas*\\n\\n'
+                    reloadResult += 'Sucesso! As configurações foram atualizadas.\\n\\n'
+                    reloadResult += 'Comandos customizados: ' + customCommands.length + '\\n'
+                    if (customCommands.length > 0) {
+                        reloadResult += 'Disponíveis:\\n'
+                        reloadResult += customCommands.map(cmd => '• !' + cmd.command + (cmd.adminOnly ? ' (admin)' : '')).join('\\n')
+                    } else {
+                        reloadResult += 'Nenhum comando customizado configurado'
+                    }
+                    reloadResult += '\\n\\nAtualizado: ' + new Date().toLocaleTimeString()
 
                     await sock.sendMessage(groupId, {
                         text: reloadResult,
@@ -1066,7 +1038,7 @@ ${customCommands.length > 0 ?
                 } catch (error) {
                     console.error('❌ Erro ao recarregar configurações:', error)
                     await sock.sendMessage(groupId, {
-                        text: `❌ *Erro ao Recarregar*\n\n🔍 Detalhes: ${error.message}\n\n💡 Verifique se o painel web está rodando e tente novamente.`,
+                        text: '*Erro ao Recarregar*\\n\\nDetalhes: ' + error.message + '\\n\\nVerifique se o painel web está rodando e tente novamente.',
                         quoted: message
                     })
                 }
@@ -1083,8 +1055,8 @@ ${customCommands.length > 0 ?
 }
 
 // Inicializar o bot
-console.log('🚀 Iniciando Bot WhatsApp...')
+console.log('Iniciando Bot WhatsApp...')
 startBot().catch((error) => {
-    console.error('❌ Erro fatal:', error)
+    console.error('Erro fatal:', error)
     process.exit(1)
 })
