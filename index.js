@@ -850,7 +850,7 @@ ${!isUserAdmin ? '💡 *Você não é administrador - alguns comandos não estã
 
 ---
 💡 ${config.donation.message}
-❤️ Use \\`${config.prefix}pix\\` para apoiar o bot!`
+❤️ Use \`${config.prefix}pix\` para apoiar o bot!`
                 
                 await sock.sendMessage(groupId, {
                     text: rulesWithFooter,
@@ -893,7 +893,7 @@ ${config.donation.message}
 Cada doação, mesmo pequena, faz toda a diferença!
 
 ---
-🎯 Comando: \`${config.prefix}pix\` ou \`${config.prefix}donate\``
+🎯 Comando: \`${config.prefix}pix\` ou \`${config.prefix}donate\`
 
                 await sock.sendMessage(groupId, {
                     text: donationMessage,
@@ -914,28 +914,26 @@ Cada doação, mesmo pequena, faz toda a diferença!
                         .filter(p => p.admin === 'admin' || p.admin === 'superadmin')
                         .map(p => p.id.replace('@s.whatsapp.net', ''))
                     
-                    groupAdminsInfo = `
-👥 *Admins do Grupo:* ${groupAdmins.length} encontrados
-${groupAdmins.map(admin => `   • ${admin}`).join('\n')}`
+                    groupAdminsInfo = '\n\n👥 *Admins do Grupo:* ' + groupAdmins.length + ' encontrados'
+                    if (groupAdmins.length > 0) {
+                        groupAdminsInfo += '\n' + groupAdmins.map(admin => '   • ' + admin).join('\n')
+                    }
                 } catch (error) {
-                    groupAdminsInfo = '\n⚠️ *Erro ao obter admins do grupo*'
+                    groupAdminsInfo = '\n\n⚠️ *Erro ao obter admins do grupo*'
                 }
                 
-                const debugInfo = `🔧 *Informações de Debug*
-
-📱 *Seu número:* ${senderNumber.replace('@s.whatsapp.net', '')}
-👑 *Owner configurado:* ${config.ownerNumber || 'Não configurado'}
-📋 *Admins configurados:* ${config.admins.length > 0 ? config.admins.join(', ') : 'Nenhum'}
-🤖 *Bot número conectado:* ${botOwnerNumber}
-📍 *Grupo ID:* ${groupId}${groupAdminsInfo}
-
-💡 *Sistema de Admin (4 tipos):*
-✅ Dono do número conectado ao bot
-✅ Owner configurado em config.json  
-✅ Admins configurados em config.json
-✅ **NOVO: Admins do grupo atual**
-
-💡 Para testar menção: \`!testmention @usuario\``
+                let debugInfo = '🔧 *Informações de Debug*\n\n'
+                debugInfo += '📱 *Seu número:* ' + senderNumber.replace('@s.whatsapp.net', '') + '\n'
+                debugInfo += '👑 *Owner configurado:* ' + (config.ownerNumber || 'Não configurado') + '\n'
+                debugInfo += '📋 *Admins configurados:* ' + (config.admins.length > 0 ? config.admins.join(', ') : 'Nenhum') + '\n'
+                debugInfo += '🤖 *Bot número conectado:* ' + botOwnerNumber + '\n'
+                debugInfo += '📍 *Grupo ID:* ' + groupId + groupAdminsInfo + '\n\n'
+                debugInfo += '💡 *Sistema de Admin (4 tipos):*\n'
+                debugInfo += '✅ Dono do número conectado ao bot\n'
+                debugInfo += '✅ Owner configurado em config.json\n'
+                debugInfo += '✅ Admins configurados em config.json\n'
+                debugInfo += '✅ **NOVO: Admins do grupo atual**\n\n'
+                debugInfo += '💡 Para testar menção: comando testmention'
 
                 await sock.sendMessage(groupId, {
                     text: debugInfo,
@@ -959,23 +957,20 @@ ${groupAdmins.map(admin => `   • ${admin}`).join('\n')}`
                     
                     const groupAdmins = groupMetadata.participants
                         .filter(p => p.admin === 'admin' || p.admin === 'superadmin')
-                        .map(p => `• ${p.id.replace('@s.whatsapp.net', '')} (${p.admin})`)
+                        .map(p => '• ' + p.id.replace('@s.whatsapp.net', '') + ' (' + p.admin + ')')
                     
-                    const botStatus = `🤖 *Status do Bot no Grupo*
-
-🏠 **Grupo:** ${groupMetadata.subject}
-🤖 **Bot número:** ${botNumber}
-📍 **Bot no grupo:** ${botParticipant ? '✅ SIM' : '❌ NÃO'}
-🛡️ **Bot é admin:** ${botParticipant?.admin ? `✅ ${botParticipant.admin.toUpperCase()}` : '❌ NÃO'}
-
-👥 **Admins do grupo (${groupAdmins.length}):**
-${groupAdmins.join('\n')}
-
-💡 **Para promover o bot:**
-1. Informações do grupo
-2. Participantes  
-3. Encontrar bot (${botNumber})
-4. Tornar administrador`
+                    let botStatus = '🤖 *Status do Bot no Grupo*\n\n'
+                    botStatus += '🏠 **Grupo:** ' + groupMetadata.subject + '\n'
+                    botStatus += '🤖 **Bot número:** ' + botNumber + '\n'
+                    botStatus += '📍 **Bot no grupo:** ' + (botParticipant ? '✅ SIM' : '❌ NÃO') + '\n'
+                    botStatus += '🛡️ **Bot é admin:** ' + (botParticipant?.admin ? '✅ ' + botParticipant.admin.toUpperCase() : '❌ NÃO') + '\n\n'
+                    botStatus += '👥 **Admins do grupo (' + groupAdmins.length + '):**\n'
+                    botStatus += groupAdmins.join('\n') + '\n\n'
+                    botStatus += '💡 **Para promover o bot:**\n'
+                    botStatus += '1. Informações do grupo\n'
+                    botStatus += '2. Participantes\n'
+                    botStatus += '3. Encontrar bot (' + botNumber + ')\n'
+                    botStatus += '4. Tornar administrador'
 
                     await sock.sendMessage(groupId, {
                         text: botStatus,
@@ -984,7 +979,7 @@ ${groupAdmins.join('\n')}
                     
                 } catch (error) {
                     await sock.sendMessage(groupId, {
-                        text: `❌ Erro ao verificar status do bot: ${error.message}`,
+                        text: '❌ Erro ao verificar status do bot: ' + error.message,
                         quoted: message
                     })
                 }
@@ -999,19 +994,16 @@ ${groupAdmins.join('\n')}
                 
                 const isOwner = await isAdmin(senderNumber, sock, groupId)
                 
-                const testResult = `🧪 *Teste de Reconhecimento do Dono*
-
-📱 *Mensagem própria?* ${message.key.fromMe ? '✅ SIM' : '❌ NÃO'}
-🔢 *Seu número:* ${senderNumber.replace('@s.whatsapp.net', '')}
-🤖 *Bot conectado:* ${sock.user?.id?.replace(':.*', '') || 'N/A'}
-🔐 *Reconhecido como admin?* ${isOwner ? '✅ SIM' : '❌ NÃO'}
-
-${isOwner ? 
-    '🎉 *SUCESSO!* Você está sendo reconhecido como dono do bot!' : 
-    '❌ *PROBLEMA!* Você NÃO está sendo reconhecido como dono.'
-}
-
-💡 Se não estiver funcionando, verifique os logs no terminal.`
+                let testResult = '🧪 *Teste de Reconhecimento do Dono*\\n\\n'
+                testResult += '📱 *Mensagem própria?* ' + (message.key.fromMe ? '✅ SIM' : '❌ NÃO') + '\\n'
+                testResult += '🔢 *Seu número:* ' + senderNumber.replace('@s.whatsapp.net', '') + '\\n'
+                testResult += '🤖 *Bot conectado:* ' + (sock.user?.id?.replace(':.*', '') || 'N/A') + '\\n'
+                testResult += '🔐 *Reconhecido como admin?* ' + (isOwner ? '✅ SIM' : '❌ NÃO') + '\\n\\n'
+                testResult += (isOwner ? 
+                    '🎉 *SUCESSO!* Você está sendo reconhecido como dono do bot!' : 
+                    '❌ *PROBLEMA!* Você NÃO está sendo reconhecido como dono.'
+                ) + '\\n\\n'
+                testResult += '💡 Se não estiver funcionando, verifique os logs no terminal.'
 
                 await sock.sendMessage(groupId, {
                     text: testResult,
@@ -1024,7 +1016,7 @@ ${isOwner ?
                 console.log('🧪 Testando extração de menção...')
                 const mentionedNumber = getMentionedNumber(message)
                 
-                const testResult = `🧪 *Teste de Menção*
+                // TEMPLATE LITERAL COMMENTED - SYNTAX ERROR
 
 ${mentionedNumber ? 
     `✅ Menção encontrada: ${mentionedNumber}` : 
